@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Node (webui)
+webui/node_modules/
+
+# IDE
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config backups
+config_back/
+
+# Data (runtime)
+data/
+*.db
+*.sqlite
+
+# Logs
+*.log
+
+# Build scripts (temporary)
+_fix_imports.py
+_fix_imports2.py
+
+# Environment
+.env
+.venv/
+venv/

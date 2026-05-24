@@ -1,0 +1,45 @@
+{
+  "manifest_version": 2,
+  "id": "bsyj.game-knowledge-plugin",
+  "version": "1.0.0",
+  "name": "GameKnowledge",
+  "description": "Industrial-grade game knowledge analysis, storage, graph, and retrieval plugin for MaiBot.",
+  "author": {
+    "name": "bsyj",
+    "url": "https://github.com/bsyj/game-knowledge-plugin"
+  },
+  "license": "GPL-3.0-or-later",
+  "urls": {
+    "repository": "https://github.com/bsyj/game-knowledge-plugin",
+    "homepage": "https://github.com/bsyj/game-knowledge-plugin",
+    "documentation": "https://github.com/bsyj/game-knowledge-plugin/blob/main/README.md"
+  },
+  "host_application": {
+    "min_version": "1.0.0",
+    "max_version": "1.99.99"
+  },
+  "sdk": {
+    "min_version": "2.0.0",
+    "max_version": "2.99.99"
+  },
+  "dependencies": [],
+  "capabilities": [
+    "send.text",
+    "chat.get_stream_by_group_id",
+    "llm.generate",
+    "message.get_by_time_in_chat",
+    "message.build_readable",
+    "component.get_all_plugins",
+    "config.get",
+    "database.query",
+    "database.save",
+    "database.get",
+    "database.count",
+    "database.delete"
+  ],
+  "i18n": {
+    "default_locale": "zh-CN",
+    "locales_path": "_locales",
+    "supported_locales": ["zh-CN", "en-US"]
+  }
+}

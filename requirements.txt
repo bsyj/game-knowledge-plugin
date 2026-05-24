@@ -1,0 +1,25 @@
+# GameKnowledge Plugin 依赖
+# 安装: pip install -r requirements.txt
+
+# 核心依赖 (必需)
+numpy>=1.20.0
+scipy>=1.7.0
+networkx>=3.0.0
+pyarrow>=10.0.0
+pandas>=1.5.0
+nest-asyncio>=1.5.0
+faiss-cpu>=1.7.0
+
+# Web 服务器 (可视化功能)
+uvicorn>=0.20.0
+fastapi>=0.100.0
+pydantic>=2.0.0
+python-multipart>=0.0.9
+
+# MaiBot SDK
+maibot-plugin-sdk>=2.0.0
+
+# 工具
+rich>=14.0.0
+tenacity>=8.0.0
+jieba>=0.42.1

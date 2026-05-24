@@ -1,0 +1,2 @@
+"""GameKnowledge plugin package."""
+

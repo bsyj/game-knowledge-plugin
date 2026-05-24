@@ -1,0 +1,532 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/napcat-assets/fonts/JetBrainsMono.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/napcat-assets/fonts/JetBrainsMono-Italic.ttf") format("truetype");
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "AaCute";
+  src: url("/napcat-assets/fonts/AaCute.woff") format("woff");
+}
+
+/* NapCat WebUI 同款方向：React + Tailwind + HeroUI 暗色玻璃风格 */
+@theme {
+  --color-background: hsl(240 10% 3.9%);
+  --color-foreground: hsl(0 0% 98%);
+  --color-card: hsl(240 6% 10% / 0.72);
+  --color-card-foreground: hsl(0 0% 98%);
+  --color-popover: hsl(240 6% 10%);
+  --color-popover-foreground: hsl(0 0% 98%);
+  --color-primary: hsl(248 95% 66%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-secondary: hsl(270 84% 68%);
+  --color-secondary-foreground: hsl(0 0% 100%);
+  --color-muted: hsl(240 5% 18%);
+  --color-muted-foreground: hsl(240 5% 64.9%);
+  --color-accent: hsl(240 5% 20%);
+  --color-accent-foreground: hsl(0 0% 98%);
+  --color-destructive: hsl(339 90% 61%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-border: hsl(0 0% 100% / 0.12);
+  --color-input: hsl(240 5% 20% / 0.78);
+  --color-ring: hsl(248 95% 66%);
+  --color-success: hsl(145 78% 45%);
+  --color-success-foreground: hsl(0 0% 100%);
+  --color-warning: hsl(37 92% 56%);
+  --color-warning-foreground: hsl(26 83% 14%);
+  --color-chart-1: hsl(248 95% 66%);
+  --color-chart-2: hsl(145 78% 45%);
+  --color-chart-3: hsl(37 92% 56%);
+  --color-chart-4: hsl(270 84% 68%);
+  --color-chart-5: hsl(339 90% 61%);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
+}
+
+:root,
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --font-family-fallbacks: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --heroui-background: 240 10% 3.9%;
+  --heroui-foreground: 0 0% 98%;
+  --heroui-foreground-50: 240 6% 10%;
+  --heroui-foreground-100: 240 5% 16%;
+  --heroui-foreground-200: 240 5% 26%;
+  --heroui-foreground-300: 240 5% 34%;
+  --heroui-foreground-400: 240 5% 46%;
+  --heroui-foreground-500: 240 5% 65%;
+  --heroui-foreground-600: 240 5% 76%;
+  --heroui-foreground-700: 240 6% 84%;
+  --heroui-foreground-800: 240 6% 91%;
+  --heroui-foreground-900: 0 0% 98%;
+  --heroui-content1: 240 6% 10%;
+  --heroui-content1-foreground: 0 0% 98%;
+  --heroui-content2: 240 5% 15%;
+  --heroui-content2-foreground: 240 6% 92%;
+  --heroui-content3: 240 5% 20%;
+  --heroui-content3-foreground: 240 6% 86%;
+  --heroui-content4: 240 4% 26%;
+  --heroui-content4-foreground: 240 5% 78%;
+  --heroui-default: 240 5% 26%;
+  --heroui-default-foreground: 0 0% 100%;
+  --heroui-default-50: 240 6% 10%;
+  --heroui-default-100: 240 5% 15%;
+  --heroui-default-200: 240 5% 20%;
+  --heroui-default-300: 240 4% 28%;
+  --heroui-default-400: 240 5% 46%;
+  --heroui-default-500: 240 5% 65%;
+  --heroui-default-600: 240 5% 72%;
+  --heroui-default-700: 240 6% 82%;
+  --heroui-default-800: 240 6% 90%;
+  --heroui-default-900: 0 0% 98%;
+  --heroui-primary: 248 95% 66%;
+  --heroui-primary-50: 248 55% 16%;
+  --heroui-primary-100: 248 62% 22%;
+  --heroui-primary-200: 248 72% 31%;
+  --heroui-primary-300: 248 82% 45%;
+  --heroui-primary-400: 248 95% 58%;
+  --heroui-primary-500: 248 95% 66%;
+  --heroui-primary-600: 248 92% 73%;
+  --heroui-primary-700: 248 92% 82%;
+  --heroui-primary-800: 248 92% 90%;
+  --heroui-primary-900: 248 92% 95%;
+  --heroui-primary-foreground: 0 0% 100%;
+  --heroui-secondary: 270 84% 68%;
+  --heroui-secondary-foreground: 0 0% 100%;
+  --heroui-success: 145 78% 45%;
+  --heroui-success-foreground: 0 0% 100%;
+  --heroui-warning: 37 92% 56%;
+  --heroui-warning-foreground: 26 83% 14%;
+  --heroui-danger: 339 90% 61%;
+  --heroui-danger-foreground: 0 0% 100%;
+  --heroui-divider: 0 0% 100%;
+  --heroui-divider-opacity: 0.12;
+  --heroui-radius-small: 8px;
+  --heroui-radius-medium: 12px;
+  --heroui-radius-large: 16px;
+  --heroui-box-shadow-small: 0 2px 12px rgb(0 0 0 / 0.18);
+  --color-background: hsl(var(--heroui-background));
+  --color-foreground: hsl(var(--heroui-foreground));
+  --color-card: hsl(var(--heroui-content1) / 0.72);
+  --color-card-foreground: hsl(var(--heroui-content1-foreground));
+  --color-popover: hsl(var(--heroui-content1));
+  --color-popover-foreground: hsl(var(--heroui-content1-foreground));
+  --color-border: hsl(var(--heroui-divider) / var(--heroui-divider-opacity));
+  --color-input: hsl(var(--heroui-content3) / 0.78);
+  --color-muted: hsl(var(--heroui-content2));
+  --color-muted-foreground: hsl(var(--heroui-default-500));
+  --color-primary: hsl(var(--heroui-primary));
+  --color-primary-foreground: hsl(var(--heroui-primary-foreground));
+  --color-secondary: hsl(var(--heroui-secondary));
+  --color-secondary-foreground: hsl(var(--heroui-secondary-foreground));
+  --color-success: hsl(var(--heroui-success));
+  --color-success-foreground: hsl(var(--heroui-success-foreground));
+  --color-warning: hsl(var(--heroui-warning));
+  --color-warning-foreground: hsl(var(--heroui-warning-foreground));
+  --color-destructive: hsl(var(--heroui-danger));
+  --color-destructive-foreground: hsl(var(--heroui-danger-foreground));
+  --color-ring: hsl(var(--heroui-primary));
+  --gk-app-bg:
+    radial-gradient(circle at 10% -10%, rgb(129 140 248 / 0.18), transparent 34rem),
+    radial-gradient(circle at 92% 10%, rgb(168 85 247 / 0.14), transparent 32rem),
+    radial-gradient(circle at 42% 112%, rgb(236 72 153 / 0.08), transparent 38rem),
+    linear-gradient(135deg, #0a0a10 0%, #11121c 48%, #08090f 100%);
+  --gk-shell-bg: rgb(10 10 16 / 0.62);
+  --gk-shell-border: rgb(255 255 255 / 0.1);
+  --gk-shell-shadow: none;
+  --gk-sidebar-bg: rgb(10 10 16 / 0.38);
+  --gk-header-bg: rgb(10 10 16 / 0.5);
+  --gk-panel-bg: rgb(24 24 27 / 0.68);
+  --gk-panel-border: rgb(255 255 255 / 0.1);
+  --gk-panel-hover-border: rgb(129 140 248 / 0.35);
+  --gk-glass-bg: rgb(24 24 27 / 0.76);
+  --gk-input-bg: rgb(255 255 255 / 0.06);
+  --gk-input-border: rgb(255 255 255 / 0.12);
+  --gk-modal-overlay: rgb(3 7 18 / 0.68);
+  --gk-modal-bg: rgb(24 24 27 / 0.96);
+  --gk-modal-border: rgb(255 255 255 / 0.12);
+  --gk-modal-section-bg: rgb(255 255 255 / 0.05);
+  --gk-modal-shadow: 0 24px 90px rgb(0 0 0 / 0.34);
+  --gk-soft-border: rgb(255 255 255 / 0.1);
+  --gk-subtle-border: rgb(255 255 255 / 0.12);
+  --gk-faint-border: rgb(255 255 255 / 0.06);
+  color: hsl(var(--heroui-foreground));
+  background-color: hsl(var(--heroui-background));
+}
+
+.light,
+[data-theme="light"] {
+  color-scheme: light;
+  --heroui-background: 0 0% 100%;
+  --heroui-foreground: 240 10% 3.9%;
+  --heroui-foreground-50: 0 0% 98%;
+  --heroui-foreground-100: 240 18% 95%;
+  --heroui-foreground-200: 240 12% 88%;
+  --heroui-foreground-300: 240 8% 76%;
+  --heroui-foreground-400: 240 5% 62%;
+  --heroui-foreground-500: 240 4% 46%;
+  --heroui-foreground-600: 240 5% 34%;
+  --heroui-foreground-700: 240 5% 26%;
+  --heroui-foreground-800: 240 6% 16%;
+  --heroui-foreground-900: 240 10% 3.9%;
+  --heroui-content1: 0 0% 100%;
+  --heroui-content1-foreground: 240 10% 3.9%;
+  --heroui-content2: 0 0% 99%;
+  --heroui-content2-foreground: 240 6% 16%;
+  --heroui-content3: 240 18% 96%;
+  --heroui-content3-foreground: 240 5% 26%;
+  --heroui-content4: 240 12% 91%;
+  --heroui-content4-foreground: 240 5% 34%;
+  --heroui-default: 240 12% 88%;
+  --heroui-default-foreground: 240 10% 3.9%;
+  --heroui-default-50: 0 0% 100%;
+  --heroui-default-100: 0 0% 98%;
+  --heroui-default-200: 240 18% 95%;
+  --heroui-default-300: 240 12% 88%;
+  --heroui-default-400: 240 5% 62%;
+  --heroui-default-500: 240 4% 46%;
+  --heroui-default-600: 240 5% 34%;
+  --heroui-default-700: 240 5% 26%;
+  --heroui-default-800: 240 6% 16%;
+  --heroui-default-900: 240 10% 3.9%;
+  --heroui-primary: 248 95% 60%;
+  --heroui-primary-50: 248 100% 97%;
+  --heroui-primary-100: 248 96% 94%;
+  --heroui-primary-200: 248 92% 87%;
+  --heroui-primary-300: 248 90% 78%;
+  --heroui-primary-400: 248 88% 68%;
+  --heroui-primary-500: 248 95% 60%;
+  --heroui-primary-600: 248 76% 52%;
+  --heroui-primary-700: 248 66% 44%;
+  --heroui-primary-800: 248 58% 34%;
+  --heroui-primary-900: 248 52% 24%;
+  --heroui-primary-foreground: 0 0% 100%;
+  --heroui-secondary: 270 82% 58%;
+  --heroui-secondary-foreground: 0 0% 100%;
+  --heroui-success: 145 72% 38%;
+  --heroui-success-foreground: 0 0% 100%;
+  --heroui-warning: 37 92% 50%;
+  --heroui-warning-foreground: 26 83% 14%;
+  --heroui-danger: 339 88% 54%;
+  --heroui-danger-foreground: 0 0% 100%;
+  --heroui-divider: 240 6% 10%;
+  --heroui-divider-opacity: 0.12;
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(240 10% 3.9%);
+  --color-card: hsl(0 0% 100% / 0.72);
+  --color-card-foreground: hsl(240 10% 3.9%);
+  --color-border: hsl(240 6% 10% / 0.12);
+  --color-input: hsl(0 0% 100% / 0.78);
+  --color-muted: hsl(0 0% 98%);
+  --color-muted-foreground: hsl(240 4% 46%);
+  --color-primary: hsl(var(--heroui-primary));
+  --color-primary-foreground: hsl(var(--heroui-primary-foreground));
+  --color-secondary: hsl(var(--heroui-secondary));
+  --color-secondary-foreground: hsl(var(--heroui-secondary-foreground));
+  --color-success: hsl(var(--heroui-success));
+  --color-success-foreground: hsl(var(--heroui-success-foreground));
+  --color-warning: hsl(var(--heroui-warning));
+  --color-warning-foreground: hsl(var(--heroui-warning-foreground));
+  --color-destructive: hsl(var(--heroui-danger));
+  --color-destructive-foreground: hsl(var(--heroui-danger-foreground));
+  --color-ring: hsl(var(--heroui-primary));
+  --gk-app-bg:
+    radial-gradient(circle at 8% -8%, rgb(129 140 248 / 0.16), transparent 34rem),
+    radial-gradient(circle at 88% 8%, rgb(216 180 254 / 0.13), transparent 30rem),
+    radial-gradient(circle at 42% 110%, rgb(244 114 182 / 0.08), transparent 36rem),
+    linear-gradient(135deg, #f8f9ff 0%, #ffffff 48%, #fff8fb 100%);
+  --gk-shell-bg: rgb(255 255 255 / 0.48);
+  --gk-shell-border: rgb(15 23 42 / 0.1);
+  --gk-shell-shadow: 0 18px 52px rgb(99 102 241 / 0.14);
+  --gk-sidebar-bg: rgb(255 255 255 / 0.48);
+  --gk-header-bg: rgb(255 255 255 / 0.74);
+  --gk-panel-bg: rgb(255 255 255 / 0.76);
+  --gk-panel-border: rgb(15 23 42 / 0.1);
+  --gk-panel-hover-border: rgb(129 140 248 / 0.35);
+  --gk-glass-bg: rgb(255 255 255 / 0.72);
+  --gk-input-bg: rgb(255 255 255 / 0.78);
+  --gk-input-border: rgb(15 23 42 / 0.12);
+  --gk-modal-overlay: rgb(15 23 42 / 0.5);
+  --gk-modal-bg: rgb(255 255 255 / 0.96);
+  --gk-modal-border: rgb(15 23 42 / 0.1);
+  --gk-modal-section-bg: rgb(248 250 252 / 0.84);
+  --gk-modal-shadow: 0 24px 80px rgb(15 23 42 / 0.2);
+  --gk-soft-border: rgb(15 23 42 / 0.1);
+  --gk-subtle-border: rgb(15 23 42 / 0.12);
+  --gk-faint-border: rgb(15 23 42 / 0.08);
+  color: hsl(var(--heroui-foreground));
+  background-color: hsl(var(--heroui-background));
+}
+
+[data-theme="light"] .border-white\/5:not(:hover):not(:focus):not(:focus-visible),
+[data-theme="light"] .border-white\/10:not(:hover):not(:focus):not(:focus-visible),
+[data-theme="light"] .border-white\/15:not(:hover):not(:focus):not(:focus-visible),
+[data-theme="light"] .border-white\/20:not(:hover):not(:focus):not(:focus-visible) {
+  border-color: var(--gk-subtle-border);
+}
+
+[data-theme="light"] .divide-white\/10 > :not(:last-child) {
+  border-color: var(--gk-subtle-border);
+}
+
+[data-theme="light"] .ring-white\/10:not(:hover):not(:focus):not(:focus-visible),
+[data-theme="light"] .ring-white\/15:not(:hover):not(:focus):not(:focus-visible) {
+  --tw-ring-color: var(--gk-subtle-border);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  min-height: 100%;
+  background: hsl(var(--heroui-background));
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  font-family: var(--font-family-fallbacks);
+  color: var(--color-foreground);
+  background: var(--gk-app-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 260ms ease, color 260ms ease;
+}
+
+@supports (-webkit-touch-callout: none) {
+  body {
+    min-height: -webkit-fill-available;
+  }
+}
+
+html,
+body,
+.napcat-glass,
+.napcat-panel,
+button,
+input,
+select,
+textarea {
+  transition-property: background-color, background, border-color, color, box-shadow, opacity;
+  transition-duration: 260ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.shiny-text {
+  background-image: linear-gradient(120deg, currentColor 35%, hsl(var(--heroui-primary) / 0.92), currentColor 65%);
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: shine 4.5s linear infinite;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  display: none;
+}
+
+[data-theme="light"] body::before {
+  display: block;
+  background-image:
+    linear-gradient(rgb(15 23 42 / 0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(15 23 42 / 0.026) 1px, transparent 1px);
+  mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.42), transparent 70%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+  border-color: var(--gk-input-border);
+  color: hsl(var(--heroui-foreground));
+  background-color: var(--gk-input-bg);
+}
+
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .napcat-glass,
+  .napcat-panel {
+    backdrop-filter: blur(12px) saturate(1.05);
+  }
+
+  .napcat-panel:hover {
+    transform: none;
+  }
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: hsl(var(--heroui-default-500) / 0.72);
+}
+
+select option {
+  color: hsl(var(--heroui-foreground));
+  background: hsl(var(--heroui-content1));
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--heroui-default-500) / 0.3);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--heroui-default-500) / 0.42);
+}
+
+.napcat-glass {
+  border: 1px solid var(--gk-panel-border);
+  background: var(--gk-glass-bg);
+  box-shadow: var(--gk-shell-shadow);
+  backdrop-filter: blur(18px) saturate(1.12);
+  transition: background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.napcat-panel {
+  border: 1px solid var(--gk-panel-border);
+  background: var(--gk-panel-bg);
+  box-shadow: none;
+  backdrop-filter: blur(14px) saturate(1.08);
+  transition: background 220ms ease, border-color 220ms ease, transform 180ms ease;
+}
+
+.napcat-panel:hover {
+  transform: translateY(-1px);
+  border-color: var(--gk-panel-hover-border);
+}
+
+.review-queue-panel:hover {
+  transform: none;
+}
+
+.napcat-input {
+  border: 1px solid var(--gk-input-border);
+  color: hsl(var(--heroui-foreground));
+  background: var(--gk-input-bg);
+  outline: none;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset;
+}
+
+.napcat-input:focus {
+  border-color: hsl(var(--heroui-primary) / 0.7);
+  box-shadow: 0 0 0 2px hsl(var(--heroui-primary) / 0.18);
+}
+
+.gk-modal-overlay {
+  background: var(--gk-modal-overlay);
+  backdrop-filter: blur(16px) saturate(1.05);
+}
+
+.gk-modal-panel {
+  border: 1px solid var(--gk-modal-border);
+  color: hsl(var(--heroui-foreground));
+  background: var(--gk-modal-bg);
+  box-shadow: var(--gk-modal-shadow);
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.gk-modal-header,
+.gk-modal-footer {
+  border-color: var(--gk-modal-border);
+}
+
+.gk-modal-surface {
+  border: 1px solid var(--gk-modal-border);
+  background: var(--gk-modal-section-bg);
+}
+
+.napcat-cute {
+  font-family: "AaCute", Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.theme-switch::before {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  content: "";
+  opacity: 0;
+  background: linear-gradient(120deg, rgb(129 140 248 / 0.32), rgb(244 114 182 / 0.24));
+  transition: opacity 220ms ease;
+}
+
+.theme-switch:hover::before {
+  opacity: 1;
+}
+
+[data-theme="light"] .theme-switch::before {
+  background: linear-gradient(120deg, rgb(129 140 248 / 0.18), rgb(244 114 182 / 0.14));
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-0.5rem) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-0.5rem) scale(0.96); }
+}
+
+@keyframes shine {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+
+@keyframes card-flash {
+  0% { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgb(129 140 248 / 0.2); }
+  100% { border-color: var(--color-border); box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
