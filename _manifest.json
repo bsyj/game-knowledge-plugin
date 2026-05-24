@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "id": "bsyj.game-knowledge-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "GameKnowledge",
   "description": "Industrial-grade game knowledge analysis, storage, graph, and retrieval plugin for MaiBot.",
   "author": {
@@ -12,7 +12,7 @@
   "urls": {
     "repository": "https://github.com/bsyj/game-knowledge-plugin",
     "homepage": "https://github.com/bsyj/game-knowledge-plugin",
-    "documentation": "https://github.com/bsyj/game-knowledge-plugin/blob/main/README.md",
+    "documentation": "https://github.com/bsyj/game-knowledge-plugin/blob/master/README.md",
     "issues": "https://github.com/bsyj/game-knowledge-plugin/issues"
   },
   "host_application": {
