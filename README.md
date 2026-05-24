@@ -63,9 +63,9 @@ python -m pip install -r plugins/game-knowledge-plugin/requirements.txt
 
 ```bash
 cd MaiBot/plugins
-git clone <本仓库地址> game-knowledge-plugin
+git clone https://github.com/bsyj/game-knowledge-plugin.git game-knowledge-plugin
 
-cd ../
+cd ..
 uv pip install -r plugins/game-knowledge-plugin/requirements.txt
 
 cd plugins/game-knowledge-plugin/webui
