@@ -1,6 +1,6 @@
 [plugin]
 enabled = true
-config_version = "0.1.1"
+config_version = "0.1.2"
 
 [storage]
 data_dir = "data/game-knowledge"
@@ -17,8 +17,7 @@ min_train_threshold = 40
 enabled = true
 host = "127.0.0.1"
 port = 5810
-# 留空则不校验 token；bs-plugin /QA 桥要求请求来自 127.0.0.1
-qa_bridge_token = ""
+cleanup_stale_runner_on_port_conflict = true
 
 [episode]
 enabled = false
@@ -29,7 +28,7 @@ pending_max_retry = 3
 [collector]
 enabled = true
 # 群 ID 白名单：只采集/分析这些群的消息；留空表示不限制
-allowed_source_group_ids = ["719376052"]
+allowed_source_group_ids = []
 auto_analyze_threshold = 30
 min_message_length = 3
 context_length = 50

@@ -71,8 +71,6 @@ const TITLE: Record<string, string> = {
   users: "用户管理",
 }
 
-const assetUrl = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`
-
 const pageMotion = {
   initial: { opacity: 0, y: 14, filter: "blur(10px)", scale: 0.992 },
   animate: { opacity: 1, y: 0, filter: "blur(0px)" },
@@ -245,13 +243,13 @@ export default function App() {
             <div className={cn("mb-7 flex items-center px-1", sidebarCollapsed ? "justify-center" : "justify-between gap-2")}>
               {!sidebarCollapsed && (
                 <div className="flex min-w-0 items-center gap-3">
-                  <motion.img
-                    src={assetUrl("napcat-assets/images/logo.png")}
-                    alt="NapCat"
-                    className="h-11 w-11 rounded-2xl object-cover ring-1 ring-primary/30"
+                  <motion.div
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/15 ring-1 ring-primary/30"
                     whileHover={{ rotate: -4, scale: 1.04 }}
                     transition={{ type: "spring", stiffness: 360, damping: 22 }}
-                  />
+                  >
+                    <LibraryBig className="h-5 w-5 text-primary" />
+                  </motion.div>
                   <div className="min-w-0">
                     <div className="napcat-cute text-xl font-bold tracking-tight">GameKnowledge</div>
                     <div className="text-xs text-default-500">MaiBot 游戏知识库</div>
@@ -286,11 +284,9 @@ export default function App() {
             <header className="sticky top-0 z-20 border-b bg-[var(--gk-header-bg)] px-3 py-3 backdrop-blur-xl sm:px-4 md:px-6" style={{ borderColor: "var(--gk-shell-border)" }}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
-                  <img
-                    src={assetUrl("napcat-assets/images/logo.png")}
-                    alt="GameKnowledge"
-                    className="h-9 w-9 shrink-0 rounded-2xl object-cover md:hidden"
-                  />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/15 md:hidden">
+                    <LibraryBig className="h-4 w-4 text-primary" />
+                  </div>
                   <div className="hidden h-10 w-10 items-center justify-center rounded-2xl bg-default-100/70 md:flex">
                     <LibraryBig className="h-5 w-5 text-primary" />
                   </div>

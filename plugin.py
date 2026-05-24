@@ -124,7 +124,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
             self._db_maintenance_task = asyncio.create_task(self._db_maintenance_loop())
             self._board_overdue_task = asyncio.create_task(self._board_overdue_loop())
             logger.info("GameKnowledge plugin loaded")
-        except Exception as exc:
+        except Exception:
             self._uninstall_kernel_log_bridge()
             raise
 
@@ -196,10 +196,10 @@ class GameKnowledgePlugin(MaiBotPlugin):
 
     async def _get_kernel(self) -> SDKMemoryKernel:
         if self._kernel is None:
-            kernel = SDKMemoryKernel(plugin_root=repo_root(), config=self._runtime_config())
+            kernel = SDKMemoryKernel(plugin_root=repo_root(), config=self._runtime_config(), plugin_ctx=self.ctx)
             try:
                 await kernel.initialize()
-            except Exception as exc:
+            except Exception:
                 shutdown = getattr(kernel, "shutdown", None)
                 if callable(shutdown):
                     await shutdown()
@@ -255,8 +255,6 @@ class GameKnowledgePlugin(MaiBotPlugin):
             return None
         if self._board_store is None:
             self._board_store = BoardStore(store=store)
-        review_queue = self._review_queue
-
         async def _review_queue_provider() -> Optional[ReviewQueueService]:
             await self._get_kernel()
             return self._review_queue
@@ -544,7 +542,6 @@ class GameKnowledgePlugin(MaiBotPlugin):
             port=int(self.config.web.port),
             announcement_store_provider=self._get_announcement_store,
             board_service_provider=self._get_board_service,
-            qa_bridge_token=str(self.config.web.qa_bridge_token or ""),
         )
         try:
             await web.start()
@@ -561,7 +558,6 @@ class GameKnowledgePlugin(MaiBotPlugin):
                         port=int(self.config.web.port),
                         announcement_store_provider=self._get_announcement_store,
                         board_service_provider=self._get_board_service,
-                        qa_bridge_token=str(self.config.web.qa_bridge_token or ""),
                     )
                     try:
                         await retry_web.start()
@@ -1086,7 +1082,6 @@ class GameKnowledgePlugin(MaiBotPlugin):
         if not query.strip():
             return "请输入搜索关键词"
         kernel = await self._get_kernel()
-        stream_id = str(context.get("chat_id", "") or "")
         result = await kernel.search_memory(
             KernelSearchRequest(
                 query=query,

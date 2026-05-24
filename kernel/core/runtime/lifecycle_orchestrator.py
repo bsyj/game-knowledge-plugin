@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 from typing import Any, Callable, Coroutine, cast
 
 from gk_shims.logger_shim import get_logger
@@ -148,6 +147,7 @@ async def initialize_storage_async(plugin: Any) -> None:
         default_dimension=plugin.get_config("embedding.dimension", 1024),
         model_name=plugin.get_config("embedding.model_name", "auto"),
         retry_config=plugin.get_config("embedding.retry", {}),
+        plugin_ctx=getattr(plugin, "ctx", None),
     )
     logger.info("嵌入 API 适配器初始化完成")
 

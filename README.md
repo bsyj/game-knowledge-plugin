@@ -1,407 +1,337 @@
 # GameKnowledge
 
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)](https://spdx.org/licenses/GPL-3.0-or-later.html)
-[![MaiBot](https://img.shields.io/badge/MaiBot-1.0.0+-8A2BE2)](https://github.com/MaiM-with-u/MaiBot)
-[![SDK](https://img.shields.io/badge/maibot--plugin--sdk-2.0.0+-orange)](https://pypi.org/project/maibot-plugin-sdk/)
+GameKnowledge 是一个 MaiBot 插件，用来把游戏群聊里的攻略、配置、报错、机制和问答整理成可审核、可检索、可被 LLM 调用的知识库。插件内置独立 WebUI，支持知识卡片审核、搜索修订、公告、留言板、用户管理和运行时维护。
 
-面向 [MaiBot](https://github.com/MaiM-with-u/MaiBot) 的工业级游戏知识分析、存储、图谱构建与检索插件。自动从群聊消息中提取结构化游戏知识，构建可检索的知识库，并提供独立 WebUI 管理后台。
+适合的场景：
 
-## 功能概览
+- 游戏群里经常出现重复问题，希望 Bot 能逐步沉淀答案。
+- 群聊里有大量经验内容，希望自动提取为结构化知识卡片。
+- 需要一个给管理员/审核员使用的 Web 管理后台。
 
-- **群聊消息自动采集** — 按群 ID 白名单自动采集聊天内容，达到阈值触发分析
-- **AI 游戏知识提取** — 使用 LLM 从聊天上下文中提取结构化游戏知识（攻略、配置、报错、玩法机制等）
-- **AI 预审核** — 自动审核提取的知识质量，分类为待审核/通过/AI 拒绝
-- **向量语义搜索** — 基于 FAISS 的向量索引，支持语义检索、时间检索、混合检索和聚合检索
-- **知识图谱** — 构建游戏知识实体关系图谱（实体 + 关系 + 段落）
-- **Episode 情景记忆** — 长程记忆检索，自动生成 Episode 摘要
-- **独立 WebUI** — 内置管理后台，支持知识卡片审核、修订、统计、用户管理
-- **留言板与公告系统** — 游戏社区的提问/回答留言板，支持自动转发到 QQ 群求助
-- **管理员命令** — 基于 `/gkb` 前缀的命令集，支持搜索、分析、审核、合并、统计
+## 功能
 
-## 快速开始
+- 自动采集群聊消息，达到阈值后调用 MaiBot 的 LLM 能力提取知识。
+- AI 预审核知识卡片，降低人工审核压力。
+- 通过 FAISS、关键词和图谱信息进行知识检索。
+- 提供 `query_game_knowledge` 等 Tool，供 MaiBot 在对话中调用知识库。
+- 提供 `/gkb` 命令，支持搜索、分析、审核、合并和统计。
+- 内置 WebUI：仪表盘、知识检索、审核队列、导入、来源管理、公告、留言板、用户管理。
+- 留言板支持无人回复后转发到群聊收集答案，再由审核员入库。
 
-### 环境要求
+## 环境要求
 
-- Python 3.10+
-- MaiBot v1.0.0+
-- Git（用于克隆仓库）
+- MaiBot 1.0.0 或更高版本。
+- Python 3.12 推荐，至少应与 MaiBot 主程序运行环境一致。
+- `maibot-plugin-sdk` 2.0.0 或更高版本。
+- 如需从源码构建 WebUI，需要 Node.js 20+ 和 npm。
 
-### 安装步骤
+依赖以 `requirements.txt` 为准。若你的 MaiBot 使用 `uv` 管理环境，推荐继续使用 `uv` 安装和测试。
+
+## 安装
+
+### 方式一：使用发布包
+
+发布包应包含已经构建好的 `webui/dist/` 目录。把插件目录放到 MaiBot 的 `plugins/` 下即可：
 
 ```bash
-# 1. 进入 MaiBot 插件目录
-cd MaiBot/plugins/
-
-# 2. 克隆插件仓库
-git clone https://github.com/bsyj/game-knowledge-plugin.git
-
-# 3. 安装 Python 依赖
-pip install -r game-knowledge-plugin/requirements.txt
-
-# 4. 在 MaiBot 插件管理中启用本插件（WebUI 或配置文件）
+MaiBot/
+└── plugins/
+    └── game-knowledge-plugin/
+        ├── plugin.py
+        ├── _manifest.json
+        ├── config.toml
+        ├── requirements.txt
+        └── webui/dist/
 ```
 
-安装完成后，插件目录结构如下：
-
-```
-game-knowledge-plugin/
-├── plugin.py              # 插件入口（MaiBotPlugin 子类）
-├── _manifest.json         # 插件元信息
-├── config.py              # Pydantic 配置模型
-├── config.toml            # 默认配置文件
-├── gk_shims/              # SDK 桥接层（日志、消息、LLM 调用）
-├── kernel/                # 内核模块（嵌入/检索/存储/策略/工具）
-├── web_server.py          # 独立 WebUI 服务端（FastAPI）
-├── auth_service.py        # WebUI 认证与权限服务
-├── board_service.py       # 留言板业务逻辑
-├── board_store.py         # 留言板数据存储
-├── announcement_store.py  # 公告数据存储
-├── revision_service.py    # 知识修订服务
-├── webui/                 # React 前端（TypeScript + Vite）
-│   ├── src/               # 前端源码
-│   ├── dist/              # 构建产物
-│   ├── package.json
-│   └── vite.config.ts
-├── docs/                  # 附加文档
-├── tests/                 # 测试用例
-└── requirements.txt       # Python 依赖
-```
-
-## 配置说明
-
-插件使用 `config.toml` 进行配置，默认路径为 `plugins/game-knowledge-plugin/config.toml`。以下是完整的配置节说明：
-
-### `[plugin]` — 基础设置
-
-| 键 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `enabled` | bool | `true` | 是否启用插件 |
-| `config_version` | str | `"0.1.1"` | 配置版本号 |
-
-### `[storage]` — 存储设置
-
-| 键 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `data_dir` | str | `"data/game-knowledge"` | 游戏知识向量库、元数据数据库和索引文件的存储目录 |
-
-### `[embedding]` — 向量嵌入设置
-
-| 键 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `dimension` | int | `1024` | 嵌入向量维度 |
-| `batch_size` | int | `32` | 批量编码的文本数量 |
-| `max_concurrent` | int | `5` | 最大并发嵌入请求数 |
-| `model_name` | str | `"auto"` | 嵌入模型名称（`auto` 则自动选择） |
-| `enable_cache` | bool | `true` | 是否启用嵌入缓存以加速重复查询 |
-| `min_train_threshold` | int | `40` | FAISS 索引训练所需的最小向量数 |
-
-### `[web]` — WebUI 设置
-
-| 键 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `enabled` | bool | `true` | 是否启用独立 WebUI 服务 |
-| `host` | str | `"127.0.0.1"` | 监听地址（仅本地回环） |
-| `port` | int | `5810` | 监听端口 |
-| `cleanup_stale_runner_on_port_conflict` | bool | `true` | 端口冲突时是否自动清理旧 Runner |
-| `qa_bridge_token` | str | `""` | 供 bs-plugin /QA 桥使用的 token；留空不校验 |
-
-### `[episode]` — Episode 情景记忆设置
-
-| 键 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `enabled` | bool | `false` | 是否启用 Episode 情景记忆检索 |
-| `generation_enabled` | bool | `false` | 是否自动生成 Episode 摘要 |
-| `pending_batch_size` | int | `12` | 待处理 Episode 的批量大小 |
-| `pending_max_retry` | int | `3` | Episode 生成失败的最大重试次数 |
-
-### `[collector]` — 消息采集设置
-
-| 键 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `enabled` | bool | `true` | 是否启用群聊消息自动采集 |
-| `allowed_source_group_ids` | list[str] | `[]` | 允许采集的群 ID 白名单。留空表示不限制（采集所有群） |
-| `auto_analyze_threshold` | int | `30` | 触发自动分析的消息数阈值 |
-| `min_message_length` | int | `3` | 忽略低于此字符数的消息 |
-| `context_length` | int | `50` | 缓冲区保留的最大消息数（滑动窗口） |
-| `llm_task_name` | str | `"utils"` | 知识提取使用的 MaiBot 模型任务名 |
-| `enable_ai_review` | bool | `true` | 是否启用 AI 预审核 |
-| `ai_review_task_name` | str | `"utils"` | AI 预审核使用的 MaiBot 模型任务名 |
-| `ai_review_error_status` | str | `"pending"` | AI 预审核失败时的降级状态 |
-
-### `[advanced]` — 高级设置
-
-| 键 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `enable_auto_save` | bool | `true` | 是否自动保存向量索引和知识库 |
-| `auto_save_interval_minutes` | int | `5` | 自动保存间隔（分钟） |
-| `debug` | bool | `false` | 是否启用调试日志 |
-| `notify_observer_group` | bool | `false` | 是否向 "观察者" 群发送知识提取通知 |
-
-## 功能详解
-
-### 群聊消息自动采集
-
-插件通过 `HookHandler` 监听 `chat.receive.after_process` 事件，自动收取群聊中的每条消息。采集流程：
-
-1. 检查消息是否来自 `allowed_source_group_ids` 白名单中的群（白名单为空则采集所有群）
-2. 过滤长度低于 `min_message_length` 的消息
-3. 过滤机器人自身发出的消息
-4. 将消息存入滑动窗口缓冲区（最多 `context_length` 条）
-5. 当缓冲区消息数达到 `auto_analyze_threshold` 时，自动触发 AI 分析
-
-### AI 游戏知识提取
-
-采集到足够消息后，插件将缓冲区消息打包送给 LLM 进行分析。LLM 会从聊天上下文中提取结构化的游戏知识，输出包含以下字段的知识卡片：
-
-- **标题 (title)** — 知识的概括标题
-- **问题 (question)** — 知识回答的问题
-- **答案 (answer)** — 具体的解答内容
-- **分类 (category)** — 知识分类
-- **标签 (tags)** — 关键词标签
-- **步骤 (steps)** — 操作步骤列表
-- **检索关键词 (search_terms)** — 搜索优化用关键词
-- **别名 (aliases)** — 实体别名/俗称
-- **答案类型 (answer_type)** — 报错修复/配置/推荐/攻略/机制/位置/掉落/其他
-
-### AI 预审核
-
-提取出的知识卡片会先经过 AI 预审核，自动判断知识质量：
-
-- **通过** — 知识质量合格，直接进入审核队列
-- **AI 拒绝** — 知识质量差、重复或无效，标记为 `ai_rejected`
-- **降级** — 如果 AI 预审核出错，降级为 `pending` 状态等待人工审核
-
-审核队列统计可通过 `/gkb pending` 命令查看。
-
-### 向量语义搜索
-
-基于 FAISS 的向量索引支持多种检索模式：
-
-| 模式 | 说明 |
-| --- | --- |
-| `search` | 纯语义搜索，按向量相似度排序 |
-| `time` | 按时间排序检索 |
-| `hybrid` | 语义 + 时间混合排序 |
-| `aggregate` | 聚合检索（默认模式），综合多维度排序 |
-
-LLM 可通过 `query_game_knowledge` Tool 直接调用检索，或在群聊中使用 `/gkb search <关键词>` 命令。
-
-### 知识图谱
-
-插件自动从知识文本中提取实体和关系，构建游戏知识图谱：
-
-- **实体** — 游戏中的物品、角色、Boss、地图、配方等
-- **关系** — 实体之间的依赖、获取方式、克制关系等
-- **段落** — 知识文本段落，与实体和关系关联
-
-知识图谱数据存储在 `metadata.db` 中，支持图遍历查询。
-
-### Episode 情景记忆
-
-Episode 模块提供长程情景记忆能力。当启用（`episode.enabled`）时：
-
-- 从知识段落中自动聚合生成 Episode 摘要
-- Episode 包含时间线、参与者和关键事件
-- 支持按时间范围和语义相似度检索历史情境
-- 为 LLM 提供更丰富的上下文背景
-
-### 留言板与公告系统
-
-#### 公告 (Announcements)
-
-- 管理员可在 WebUI 中发布公告（标题、正文、严重程度、置顶、生效/失效时间）
-- 公告以 Banner 形式在所有页面顶部展示
-- 用户可单独关闭每条公告（记录到 localStorage）
-- 公告数据存储在插件自带的 `metadata.db` 中
-
-#### 留言板 (Board)
-
-- 任意登录用户可在 WebUI 中创建主题提问
-- 支持楼层回复和引用回复
-- **无人回应自动转发**：主题创建 2 天后无人回应，bot 自动用 LLM 改写问句并转发到 QQ 群求助
-- **群聊答案收集**：转发后自动收集团内后续 20 条消息或 20 分钟内的消息作为候选答案
-- 管理员或审核员可将已解决的问答标记入库，转为正式知识卡片
-
-详细说明见 [docs/board.md](docs/board.md)。
-
-## WebUI 使用
-
-### 访问地址
-
-插件启动后，在浏览器中访问：
-
-```
-http://127.0.0.1:5810
-```
-
-### 首次使用
-
-1. 打开 WebUI 后，使用 QQ 号注册账号
-2. 登录后即可使用知识管理、公告、留言板等功能
-3. 管理员权限需在数据库或 MaiBot 配置中指定
-
-### 主要功能页面
-
-- **知识卡片管理** — 浏览、搜索、审核、修订知识卡片
-- **统计面板** — 查看段落数、实体数、关系数、审核队列状态
-- **公告管理** — 发布、查看、删除公告
-- **留言板** — 创建主题、回复、标记已解决
-
-### 重新构建前端
-
-如需自定义 WebUI 前端：
+然后在 MaiBot 的 Python 环境里安装插件依赖：
 
 ```bash
-cd webui/
+cd MaiBot
+uv pip install -r plugins/game-knowledge-plugin/requirements.txt
+```
+
+如果你的项目没有使用 `uv`：
+
+```bash
+python -m pip install -r plugins/game-knowledge-plugin/requirements.txt
+```
+
+重启 MaiBot 后，在插件管理中启用 GameKnowledge。
+
+### 方式二：源码安装
+
+```bash
+cd MaiBot/plugins
+git clone <本仓库地址> game-knowledge-plugin
+
+cd ../
+uv pip install -r plugins/game-knowledge-plugin/requirements.txt
+
+cd plugins/game-knowledge-plugin/webui
 npm install
 npm run build
 ```
 
-构建产物会输出到 `webui/dist/` 目录，插件重启后自动加载最新前端。
+构建完成后确认存在 `plugins/game-knowledge-plugin/webui/dist/index.html`，再重启 MaiBot。
 
-前端技术栈：React + TypeScript + Vite。
+## 最小配置
 
-## 命令列表
+配置文件是插件目录下的 `config.toml`。默认配置已经可以启动，但正式使用前建议至少修改群白名单和 WebUI 监听地址。
 
-插件提供基于 `/gkb` 前缀的管理命令集：
+```toml
+[plugin]
+enabled = true
+config_version = "0.1.2"
 
-| 命令 | 用法 | 说明 |
+[storage]
+data_dir = "data/game-knowledge"
+
+[web]
+enabled = true
+host = "127.0.0.1"
+port = 5810
+cleanup_stale_runner_on_port_conflict = true
+
+[collector]
+enabled = true
+allowed_source_group_ids = []
+auto_analyze_threshold = 30
+min_message_length = 3
+context_length = 50
+llm_task_name = "utils"
+enable_ai_review = true
+ai_review_task_name = "utils"
+ai_review_error_status = "pending"
+```
+
+### 必改项
+
+`collector.allowed_source_group_ids`
+
+群 ID 白名单。默认是空数组，表示不限制采集范围，也就是 Bot 能收到的群聊都可能被采集分析。公开部署或多群运行时强烈建议改成自己的目标群：
+
+```toml
+allowed_source_group_ids = ["123456789", "987654321"]
+```
+
+`web.host`
+
+默认 `127.0.0.1` 只允许本机访问 WebUI，适合本地部署。如果你要从局域网访问，可以改为：
+
+```toml
+host = "0.0.0.0"
+```
+
+如果开放到公网，请务必放在反向代理、访问控制或 VPN 后面。
+
+`collector.llm_task_name` 和 `collector.ai_review_task_name`
+
+这两个值对应 MaiBot 模型配置中的任务名。默认使用 `utils`。如果你的 MaiBot 没有这个任务，请改成你实际可用的任务名。
+
+## 完整配置说明
+
+| 配置 | 默认值 | 说明 |
 | --- | --- | --- |
-| `/gkb help` | `/gkb help` | 显示所有可用命令 |
-| `/gkb search` | `/gkb search <关键词>` | 搜索游戏知识库 |
-| `/gkb analyze` | `/gkb analyze` | 手动触发当前群聊消息分析 |
-| `/gkb pending` | `/gkb pending` | 查看待审核卡片数量统计 |
-| `/gkb approve` | `/gkb approve <卡片ID>` | 审核通过一张卡片并写入知识库 |
-| `/gkb reject` | `/gkb reject <卡片ID>` | 拒绝一张卡片（不删除数据） |
-| `/gkb merge` | `/gkb merge <源卡ID> <目标卡ID>` | 把源卡片合并到目标卡片（解决重复知识） |
-| `/gkb stats` | `/gkb stats` | 查看知识库统计信息 |
+| `plugin.enabled` | `true` | 是否启用插件 |
+| `plugin.config_version` | `"0.1.2"` | 配置模板版本 |
+| `storage.data_dir` | `"data/game-knowledge"` | 插件数据库、索引和缓存目录 |
+| `embedding.dimension` | `1024` | 向量维度，需要与实际 embedding 后端一致 |
+| `embedding.batch_size` | `32` | 批量 embedding 数量 |
+| `embedding.max_concurrent` | `5` | 最大并发 embedding 请求 |
+| `embedding.model_name` | `"auto"` | embedding 模型名，`auto` 表示跟随运行时选择 |
+| `embedding.enable_cache` | `true` | 是否启用 embedding 缓存 |
+| `embedding.min_train_threshold` | `40` | FAISS 索引训练阈值 |
+| `web.enabled` | `true` | 是否启动独立 WebUI |
+| `web.host` | `"127.0.0.1"` | WebUI 监听地址 |
+| `web.port` | `5810` | WebUI 监听端口 |
+| `web.cleanup_stale_runner_on_port_conflict` | `true` | 同一 MaiBot 旧 Runner 占用端口时自动清理 |
+| `episode.enabled` | `false` | 是否启用 Episode 情景检索 |
+| `episode.generation_enabled` | `false` | 是否自动生成 Episode 摘要 |
+| `episode.pending_batch_size` | `12` | Episode 待处理批量大小 |
+| `episode.pending_max_retry` | `3` | Episode 生成重试次数 |
+| `collector.enabled` | `true` | 是否采集群聊消息 |
+| `collector.allowed_source_group_ids` | `[]` | 允许采集的群 ID；留空表示不限制 |
+| `collector.auto_analyze_threshold` | `30` | 缓冲消息达到多少条后自动分析 |
+| `collector.min_message_length` | `3` | 忽略过短消息 |
+| `collector.context_length` | `50` | 每个群保留的上下文消息数量 |
+| `collector.llm_task_name` | `"utils"` | 知识提取使用的 MaiBot 模型任务 |
+| `collector.enable_ai_review` | `true` | 是否启用 AI 预审核 |
+| `collector.ai_review_task_name` | `"utils"` | AI 预审核使用的 MaiBot 模型任务 |
+| `collector.ai_review_error_status` | `"pending"` | 预审核失败时写入的状态 |
+| `advanced.enable_auto_save` | `true` | 是否定期保存索引和运行时状态 |
+| `advanced.auto_save_interval_minutes` | `5` | 自动保存间隔 |
+| `advanced.debug` | `false` | 是否输出调试日志 |
+| `advanced.notify_observer_group` | `false` | 是否发送观察通知 |
 
-### 命令示例
+## 首次使用 WebUI
 
-```
-# 搜索"铁砧配方"
-/gkb search 铁砧配方
+插件启动后访问：
 
-# 查看审核状态
-/gkb pending
-
-# 通过第 42 号卡片
-/gkb approve 42
-
-# 合并重复卡片：将 15 号卡片合并到 42 号
-/gkb merge 15 42
-
-# 查看知识库统计
-/gkb stats
-```
-
-## 开发指南
-
-### 目录结构
-
-```
-game-knowledge-plugin/
-├── plugin.py              # 插件入口（GameKnowledgePlugin 类）
-├── _manifest.json         # 插件清单（ID、版本、依赖、能力声明）
-├── config.py              # Pydantic 配置模型定义
-├── config.toml            # 默认配置
-├── gk_shims/              # SDK 桥接层
-│   ├── logger_shim.py     # 日志桥接
-│   ├── message_shim.py    # 消息桥接
-│   └── llm_shim.py        # LLM 调用桥接
-├── kernel/                # 内核模块
-│   ├── core/
-│   │   ├── runtime/       # SDK 内核运行时
-│   │   ├── utils/         # 工具（分析器、审核队列等）
-│   │   └── ...            # 嵌入、检索、存储、策略
-│   └── paths.py           # 路径工具
-├── web_server.py          # FastAPI WebUI 服务端
-├── auth_service.py        # 认证与权限服务
-├── board_service.py       # 留言板业务逻辑
-├── board_store.py         # 留言板持久化
-├── announcement_store.py  # 公告持久化
-├── revision_service.py    # 知识修订服务
-├── webui/                 # React 前端
-│   ├── src/               # 源码目录
-│   ├── dist/              # 构建产物
-│   └── package.json       # Node 依赖
-├── docs/                  # 附加文档
-├── tests/                 # 测试用例
-└── requirements.txt       # Python 依赖清单
+```text
+http://127.0.0.1:5810
 ```
 
-### 添加新功能
+第一次进入 WebUI 时会出现初始化页面，创建第一个管理员账号。后续可以在“用户管理”里创建审核员或普通用户。
 
-1. **添加配置项** — 在 `config.py` 对应的配置类中添加 `Field`
-2. **添加 LLM Tool** — 在 `plugin.py` 中使用 `@Tool` 装饰器注册新工具
-3. **添加命令** — 在 `_cmd_help` 中添加说明，在 `handle_gkb_command` 中添加路由分支
-4. **扩展 WebUI** — 修改 `webui/src/` 前端代码，`npm run build` 重新构建
-5. **添加 Web API** — 在 `web_server.py` 中注册新路由
+常见用户组：
 
-### 内核扩展
+- `admin`：拥有全部管理权限。
+- `reviewer`：可审核、修订和处理留言板。
+- `viewer`：只读和普通留言权限。
 
-- **检索策略** — 在 `kernel/core/` 中添加新的检索模式
-- **嵌入模型** — 修改 `embedding` 配置节以切换嵌入后端
-- **存储后端** — 内核存储模块支持替换不同的向量数据库后端
+WebUI 登录 token 存在浏览器本地存储中。修改密码后，旧 token 会失效。
 
-### 测试
+## 使用命令
+
+插件提供 `/gkb` 命令：
+
+| 命令 | 示例 | 说明 |
+| --- | --- | --- |
+| `/gkb help` | `/gkb help` | 查看帮助 |
+| `/gkb search <关键词>` | `/gkb search 铁砧配方` | 搜索知识库 |
+| `/gkb analyze` | `/gkb analyze` | 手动分析当前群缓存消息 |
+| `/gkb pending` | `/gkb pending` | 查看待审核统计 |
+| `/gkb approve <卡片ID>` | `/gkb approve 42` | 审核通过并写入知识库 |
+| `/gkb reject <卡片ID>` | `/gkb reject 42` | 拒绝卡片 |
+| `/gkb merge <源ID> <目标ID>` | `/gkb merge 15 42` | 合并重复卡片 |
+| `/gkb stats` | `/gkb stats` | 查看知识库统计 |
+
+## 推荐工作流
+
+1. 在 `config.toml` 中填写目标群 `allowed_source_group_ids`。
+2. 启动 MaiBot，让插件开始采集群聊。
+3. 当消息达到 `auto_analyze_threshold` 后，插件自动生成候选知识卡片。
+4. 管理员或审核员在 WebUI 的“审核队列”中审核卡片。
+5. 审核通过的卡片会进入知识库，可被 `/gkb search` 和 LLM Tool 检索。
+6. 发现重复或错误时，在 WebUI 中修订、合并或删除。
+
+## 留言板和公告
+
+留言板用于收集用户问题：
+
+- 登录用户可以创建主题和回复。
+- 主题长时间无人回应时，插件可转发到配置的目标群收集答案。
+- 审核员可以把已解决主题整理为知识卡片入库。
+
+公告用于 WebUI 内通知：
+
+- 管理员可以发布公告。
+- 支持严重程度、置顶、生效时间和失效时间。
+- 普通用户可以阅读并关闭公告横幅。
+
+更多留言板说明见 [docs/board.md](docs/board.md)。
+
+## 数据和隐私
+
+插件会在 `storage.data_dir` 下保存数据库、向量索引、缓存和导入数据。默认目录是：
+
+```text
+plugins/game-knowledge-plugin/data/game-knowledge
+```
+
+请不要把运行后的 `data/`、数据库文件、日志文件、`.env`、本地备份和用户上传文件提交到公开仓库。仓库的 `.gitignore` 已默认忽略这些运行时数据。
+
+公开发布前建议执行：
 
 ```bash
-cd game-knowledge-plugin/
-python -m pytest tests/ -v
+git status --short
+rg -n "你的群号|你的QQ|token|secret|password|api_key|Authorization|Bearer" .
 ```
 
-## 依赖
+测试文件中出现的示例账号、示例密码和示例群号只用于自动化测试，不应替换为真实数据。
 
-| 依赖 | 版本 | 用途 |
-| --- | --- | --- |
-| numpy | >=1.20.0 | 数值计算 |
-| scipy | >=1.7.0 | 科学计算 |
-| networkx | >=3.0.0 | 知识图谱 |
-| pyarrow | >=10.0.0 | 数据序列化 |
-| pandas | >=1.5.0 | 数据处理 |
-| faiss-cpu | >=1.7.0 | 向量索引与检索 |
-| fastapi | >=0.100.0 | Web API 框架 |
-| uvicorn | >=0.20.0 | ASGI 服务器 |
-| pydantic | >=2.0.0 | 数据校验 |
-| python-multipart | >=0.0.9 | 表单解析 |
-| aiohttp | >=3.8.0 | 异步 HTTP 客户端 |
-| nest-asyncio | >=1.5.0 | 嵌套事件循环 |
-| openai | >=1.0.0 | LLM API 调用 |
-| json-repair | >=0.30.0 | JSON 修复 |
-| sentence-transformers | >=2.2.0 | 向量嵌入（可选） |
-| psutil | >=5.9.0 | 系统监控 |
-| tomlkit | >=0.12.0 | TOML 配置读写 |
-| rich | >=14.0.0 | 终端美化输出 |
-| tenacity | >=8.0.0 | 重试机制 |
-| jieba | >=0.42.1 | 中文分词 |
-| maibot-plugin-sdk | >=2.0.0 | MaiBot 插件 SDK |
+## 开发
 
-## 常见问题
+Python 测试：
 
-**Q: WebUI 页面打不开？**
+```bash
+cd MaiBot/plugins/game-knowledge-plugin
+uv run --project ../.. python -m pytest tests -v
+```
 
-A: 检查 `web.enabled` 是否为 `true`，确认端口 `5810` 未被其他程序占用。查看 MaiBot 日志中是否有 WebUI 启动失败的提示。
+卡片操作手动验证脚本：
 
-**Q: 知识提取没有触发？**
+```bash
+cd MaiBot/plugins/game-knowledge-plugin
+../../.venv/Scripts/python.exe tests/test_card_operations.py
+```
 
-A: 确认 `collector.enabled` 为 `true`，`allowed_source_group_ids` 包含目标群 ID（或留空），且群聊消息数已达到 `auto_analyze_threshold` 阈值。
+Linux/macOS 可改为：
 
-**Q: 搜索返回空结果？**
+```bash
+../../.venv/bin/python tests/test_card_operations.py
+```
 
-A: 确保已有知识卡片审核通过并写入知识库。使用 `/gkb stats` 查看知识库段落数。新部署的插件需要先在活跃的游戏群中累积聊天数据并触发自动分析。
+前端构建：
 
-**Q: 留言板转发失败？**
+```bash
+cd MaiBot/plugins/game-knowledge-plugin/webui
+npm install
+npm run build
+```
 
-A: 确保 `allowed_source_group_ids` 至少配置了一个群 ID，且该群最近在 bot 上有过消息记录（需要已注册聊天流）。
+注意：`tests/test_web_api.py` 当前默认跳过，因为它依赖完整 MaiBot 插件运行时和 WebServer 导入环境。需要验证 HTTP API 时，请先在 MaiBot 中启动插件，再结合实际接口或调整测试夹具运行。
+
+## 目录结构
+
+```text
+game-knowledge-plugin/
+├── plugin.py
+├── _manifest.json
+├── config.py
+├── config.toml
+├── requirements.txt
+├── web_server.py
+├── auth_service.py
+├── board_service.py
+├── board_store.py
+├── announcement_store.py
+├── revision_service.py
+├── gk_shims/
+├── kernel/
+├── webui/
+│   ├── src/
+│   ├── dist/
+│   └── package.json
+├── docs/
+└── tests/
+```
+
+## 故障排查
+
+WebUI 打不开：
+
+- 确认 `web.enabled = true`。
+- 确认端口没有被占用。
+- 确认 `webui/dist/index.html` 存在。
+- 查看 MaiBot 日志中的 `GameKnowledge WebUI started` 或启动失败信息。
+
+没有自动提取知识：
+
+- 确认 `collector.enabled = true`。
+- 确认目标群在 `allowed_source_group_ids` 中，或该配置为空。
+- 确认消息数量达到 `auto_analyze_threshold`。
+- 确认 `llm_task_name` 对应的 MaiBot 模型任务可用。
+
+搜索没有结果：
+
+- 新插件需要先审核通过知识卡片。
+- 使用 `/gkb stats` 查看段落数和卡片数。
+- 在 WebUI 的“审核队列”中确认是否有待审核卡片。
+
+Embedding 报错：
+
+- 确认 MaiBot 提供 `llm.embed` 能力。
+- 确认 `embedding.dimension` 与实际 embedding 后端输出维度一致。
+- 如使用本地模型，确认 `sentence-transformers` 等依赖已经安装。
+
+## 致谢
+
+感谢 [Mai-with-u/MaiBot](https://github.com/Mai-with-u/MaiBot) 提供插件运行时、SDK 和机器人宿主能力。
+
+感谢 [A-Dawn/A_memorix](https://github.com/A-Dawn/A_memorix/) 在记忆、检索和知识管理方向上的启发与基础工作。
 
 ## 许可证
 
-本项目基于 GNU General Public License v3.0 或更高版本（GPL-3.0-or-later）开源。详见 [LICENSE](LICENSE)。
-
----
-
-**作者**: bsyj  
-**仓库**: [github.com/bsyj/game-knowledge-plugin](https://github.com/bsyj/game-knowledge-plugin)  
-**MaiBot**: [github.com/MaiM-with-u/MaiBot](https://github.com/MaiM-with-u/MaiBot)
+本项目使用 GPL-3.0-or-later。详见 [kernel/LICENSE](kernel/LICENSE) 及相关许可证文件。

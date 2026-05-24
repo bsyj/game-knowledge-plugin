@@ -40,12 +40,14 @@ class EmbeddingAPIAdapter:
         enable_cache: bool = False,
         model_name: str = "auto",
         retry_config: Optional[dict] = None,
+        plugin_ctx: Any = None,
     ) -> None:
         self.batch_size = max(1, int(batch_size))
         self.max_concurrent = max(1, int(max_concurrent))
         self.default_dimension = max(1, int(default_dimension))
         self.enable_cache = bool(enable_cache)
         self.model_name = str(model_name or "auto")
+        self.plugin_ctx = plugin_ctx
 
         self.retry_config = retry_config or {}
         self.max_attempts = max(1, int(self.retry_config.get("max_attempts", 5)))
@@ -66,6 +68,10 @@ class EmbeddingAPIAdapter:
             f"dim={self.default_dimension}, "
             f"model={self.model_name}"
         )
+
+    def set_plugin_context(self, plugin_ctx: Any) -> None:
+        """设置插件上下文，用于通过 SDK 调用宿主 embedding 能力。"""
+        self.plugin_ctx = plugin_ctx
 
     def _get_current_model_config(self):
         return config_manager.get_model_config()
@@ -147,6 +153,30 @@ class EmbeddingAPIAdapter:
             raise RuntimeError(f"{source} 返回了非有限 embedding 值")
         return array
 
+    @staticmethod
+    def _extract_sdk_embedding(payload: Any, *, source: str) -> List[float]:
+        if not isinstance(payload, dict):
+            raise RuntimeError(f"{source} 返回格式非法")
+        if payload.get("success") is False:
+            raise RuntimeError(str(payload.get("error") or payload.get("message") or f"{source} 调用失败"))
+        embedding = payload.get("embedding")
+        if embedding is None:
+            raise RuntimeError(f"{source} 未返回 embedding")
+        vector = EmbeddingAPIAdapter._validate_embedding_vector(embedding, source=source)
+        return vector.tolist()
+
+    async def _get_embedding_via_sdk(self, text: str) -> Optional[List[float]]:
+        if self.plugin_ctx is None:
+            return None
+
+        llm_proxy = getattr(self.plugin_ctx, "llm", None)
+        embed = getattr(llm_proxy, "embed", None)
+        if not callable(embed):
+            return None
+
+        result = await embed(text=text, task_name="embedding")
+        return self._extract_sdk_embedding(result, source="宿主 embedding 能力")
+
     async def _request_with_retry(self, client, model_info, text: str, extra_params: dict):
         retriable_exceptions = (
             openai.APIConnectionError,
@@ -194,6 +224,10 @@ class EmbeddingAPIAdapter:
         *,
         include_dimension: bool = True,
     ) -> Optional[List[float]]:
+        sdk_embedding = await self._get_embedding_via_sdk(text)
+        if sdk_embedding is not None:
+            return sdk_embedding
+
         candidate_names = self._resolve_candidate_model_names()
         if not candidate_names:
             raise RuntimeError("embedding 任务未配置模型")
@@ -385,8 +419,8 @@ class EmbeddingAPIAdapter:
 
             semaphore = asyncio.Semaphore(self.max_concurrent)
 
-            async def encode_with_semaphore(text: str, batch_index: int, absolute_index: int):
-                async with semaphore:
+            async def encode_with_semaphore(text: str, batch_index: int, absolute_index: int, sem=semaphore):
+                async with sem:
                     embedding = await self._get_embedding_direct(text, dimensions=dimensions)
                     if embedding is None:
                         raise RuntimeError(f"文本 {absolute_index} 编码失败：embedding 返回为空")
@@ -479,6 +513,7 @@ def create_embedding_api_adapter(
     enable_cache: bool = False,
     model_name: str = "auto",
     retry_config: Optional[dict] = None,
+    plugin_ctx: Any = None,
 ) -> EmbeddingAPIAdapter:
     return EmbeddingAPIAdapter(
         batch_size=batch_size,
@@ -487,4 +522,5 @@ def create_embedding_api_adapter(
         enable_cache=enable_cache,
         model_name=model_name,
         retry_config=retry_config,
+        plugin_ctx=plugin_ctx,
     )

@@ -6,6 +6,8 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+!webui/dist/
+!webui/dist/**
 
 # Node (webui)
 webui/node_modules/
@@ -31,6 +33,9 @@ data/
 
 # Logs
 *.log
+
+# Local release artifacts
+release/
 
 # Build scripts (temporary)
 _fix_imports.py

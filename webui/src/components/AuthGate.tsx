@@ -31,7 +31,8 @@ export default function AuthGate({ theme, onThemeToggle, onReady }: Props) {
   const [captchaBusy, setCaptchaBusy] = useState(false)
   const [captchaCooldown, setCaptchaCooldown] = useState(0)
   const [error, setError] = useState("")
-  const [form, setForm] = useState({ username: "admin", display_name: "管理员", password: "", captcha: "" })
+  const [form, setForm] = useState({ username: "admin", display_name: "", password: "", captcha: "" })
+  const subtitle = bootstrap ? "创建第一个 admin 账号后启用权限系统" : mode === "login" ? "输入账号和密码进入" : ""
 
   useEffect(() => {
     let alive = true
@@ -141,7 +142,7 @@ export default function AuthGate({ theme, onThemeToggle, onReady }: Props) {
           </div>
           <div className="min-w-0 pr-10">
             <h1 className="text-lg font-semibold tracking-tight">{bootstrap ? "初始化管理员" : mode === "register" ? "注册 GameKnowledge" : "登录 GameKnowledge"}</h1>
-            <p className="text-xs text-default-500">{bootstrap ? "创建第一个 admin 账号后启用权限系统" : mode === "register" ? `使用注册群 ${settings?.registration_captcha_group_id || "719376052"} 的 QQ 号验证` : "输入账号和密码进入"}</p>
+            {subtitle && <p className="text-xs text-default-500">{subtitle}</p>}
           </div>
         </div>
 

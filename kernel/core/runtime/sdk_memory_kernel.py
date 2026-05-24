@@ -155,9 +155,16 @@ class _KernelRuntimeFacade:
 
 
 class SDKMemoryKernel:
-    def __init__(self, *, plugin_root: Path, config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(
+        self,
+        *,
+        plugin_root: Path,
+        config: Optional[Dict[str, Any]] = None,
+        plugin_ctx: Any = None,
+    ) -> None:
         self.plugin_root = Path(plugin_root).resolve()
         self.config = config or {}
+        self.plugin_ctx = plugin_ctx
         storage_cfg = self._cfg("storage", {}) or {}
         data_dir = str(storage_cfg.get("data_dir", "./data") or "./data")
         self.data_dir = resolve_repo_path(data_dir, fallback=default_data_dir())
@@ -640,6 +647,7 @@ class SDKMemoryKernel:
             enable_cache=bool(self._cfg("embedding.enable_cache", False)),
             model_name=str(self._cfg("embedding.model_name", "auto") or "auto"),
             retry_config=self._cfg("embedding.retry", {}) or {},
+            plugin_ctx=self.plugin_ctx,
         )
         dimension_detection_task = asyncio.create_task(
             asyncio.to_thread(lambda: asyncio.run(self.embedding_manager._detect_dimension()))

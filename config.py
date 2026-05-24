@@ -13,7 +13,7 @@ class PluginSectionConfig(PluginConfigBase):
     __ui_order__ = 0
 
     enabled: bool = Field(default=True, description="是否启用 GameKnowledge")
-    config_version: str = Field(default="0.1.1", description="配置版本")
+    config_version: str = Field(default="0.1.2", description="配置版本")
 
 
 class StorageConfig(PluginConfigBase):
@@ -48,10 +48,6 @@ class WebConfig(PluginConfigBase):
     cleanup_stale_runner_on_port_conflict: bool = Field(
         default=True,
         description="端口被同一 MaiBot 旧 Runner 占用时自动清理并重试启动 WebUI",
-    )
-    qa_bridge_token: str = Field(
-        default="",
-        description="供 bs-plugin /QA 桥使用的 token；留空则不校验。仅本机 loopback 才能访问该接口",
     )
 
 

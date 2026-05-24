@@ -1,10 +1,10 @@
 """Comprehensive test: exercise as many card operations as possible.
 
-Runs against an isolated temp-directory SQLite database.  No external services needed.
+Runs against an isolated temp-directory SQLite database. No external services needed.
 
 Usage:
-    cd D:\\yunzaiv3\\MaiM-with-u\\MaiBot
-    python plugins/game_knowledge_plugin/tests/test_card_operations.py
+
+    python plugins/game-knowledge-plugin/tests/test_card_operations.py
 """
 
 from __future__ import annotations
@@ -93,7 +93,7 @@ def _make_card(**overrides: Any) -> Dict[str, Any]:
         "ai_review_issues": [],
         "source_message_ids": [],
         "source_stream_id": "test_stream_001",
-        "source_group_id": "719376052",
+        "source_group_id": "100000001",
         "source_group_name": "RLCraft",
         "evidence": "测试证据",
         "created_by": "test_runner",
@@ -128,7 +128,7 @@ def run() -> int:
     store = MetadataStore(data_dir=tmpdir.name, db_name="metadata.db")
     store.connect()
     kernel = MockKernel(store)
-    rq = ReviewQueueService(kernel=kernel, allowed_source_group_ids=["719376052", "000000000"])
+    rq = ReviewQueueService(kernel=kernel, allowed_source_group_ids=["100000001", "000000000"])
 
     try:
         # 1 ── 创建 ──────────────────────────────────────────────────

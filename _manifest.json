@@ -12,7 +12,8 @@
   "urls": {
     "repository": "https://github.com/bsyj/game-knowledge-plugin",
     "homepage": "https://github.com/bsyj/game-knowledge-plugin",
-    "documentation": "https://github.com/bsyj/game-knowledge-plugin/blob/main/README.md"
+    "documentation": "https://github.com/bsyj/game-knowledge-plugin/blob/main/README.md",
+    "issues": "https://github.com/bsyj/game-knowledge-plugin/issues"
   },
   "host_application": {
     "min_version": "1.0.0",
@@ -27,6 +28,7 @@
     "send.text",
     "chat.get_stream_by_group_id",
     "llm.generate",
+    "llm.embed",
     "message.get_by_time_in_chat",
     "message.build_readable",
     "component.get_all_plugins",
@@ -38,8 +40,6 @@
     "database.delete"
   ],
   "i18n": {
-    "default_locale": "zh-CN",
-    "locales_path": "_locales",
-    "supported_locales": ["zh-CN", "en-US"]
+    "default_locale": "zh-CN"
   }
 }

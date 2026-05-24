@@ -1,22 +1,6 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("/napcat-assets/fonts/JetBrainsMono.ttf") format("truetype");
-}
-
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("/napcat-assets/fonts/JetBrainsMono-Italic.ttf") format("truetype");
-  font-style: italic;
-}
-
-@font-face {
-  font-family: "AaCute";
-  src: url("/napcat-assets/fonts/AaCute.woff") format("woff");
-}
-
-/* NapCat WebUI 同款方向：React + Tailwind + HeroUI 暗色玻璃风格 */
+/* GameKnowledge WebUI：React + Tailwind + HeroUI 暗色玻璃风格 */
 @theme {
   --color-background: hsl(240 10% 3.9%);
   --color-foreground: hsl(0 0% 98%);
@@ -482,7 +466,7 @@ select option {
 }
 
 .napcat-cute {
-  font-family: "AaCute", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-family-fallbacks);
 }
 
 .theme-switch::before {

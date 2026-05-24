@@ -221,12 +221,10 @@ class GameKnowledgeAuthService:
         defaults = {
             "allow_registration": "true",
             "captcha_placeholder_enabled": "false",
-            "registration_captcha_enabled": "true",
-            "registration_captcha_group_id": "719376052",
+            "registration_captcha_enabled": "false",
+            "registration_captcha_group_id": "",
             "registration_captcha_cooldown_seconds": "3600",
             "registration_captcha_ttl_seconds": "28800",
-            "registration_captcha_bridge_url": "http://127.0.0.1:2536/bs-plugin/api/game-knowledge-captcha/send",
-            "registration_captcha_bridge_token": "",
             "default_registration_group": "viewer",
         }
         for key, value in defaults.items():
@@ -240,8 +238,8 @@ class GameKnowledgeAuthService:
         return {
             "allow_registration": self._setting_bool("allow_registration", True),
             "captcha_placeholder_enabled": self._setting_bool("captcha_placeholder_enabled", True),
-            "registration_captcha_enabled": self._setting_bool("registration_captcha_enabled", True),
-            "registration_captcha_group_id": self._setting_value("registration_captcha_group_id", "719376052"),
+            "registration_captcha_enabled": self._setting_bool("registration_captcha_enabled", False),
+            "registration_captcha_group_id": self._setting_value("registration_captcha_group_id", ""),
             "registration_captcha_cooldown_seconds": self._setting_int("registration_captcha_cooldown_seconds", 3600, minimum=60, maximum=24 * 3600),
             "registration_captcha_ttl_seconds": self._setting_int("registration_captcha_ttl_seconds", 8 * 3600, minimum=300, maximum=24 * 3600),
             "default_registration_group": self._setting_value("default_registration_group", "viewer"),
@@ -389,12 +387,10 @@ class GameKnowledgeAuthService:
         return {
             "username": clean_username,
             "code": f"{secrets.randbelow(1_000_000):06d}",
-            "group_id": self._setting_value("registration_captcha_group_id", "719376052"),
+            "group_id": self._setting_value("registration_captcha_group_id", ""),
             "expires_at": now + ttl,
             "ttl_seconds": ttl,
             "cooldown_seconds": cooldown,
-            "bridge_url": self._setting_value("registration_captcha_bridge_url", "http://127.0.0.1:2536/bs-plugin/api/game-knowledge-captcha/send"),
-            "bridge_token": self._setting_value("registration_captcha_bridge_token", ""),
         }
 
     def store_registration_captcha(self, *, username: str, code: str, expires_at: float, ip: str = "", user_agent: str = "", send_detail: str = "") -> None:

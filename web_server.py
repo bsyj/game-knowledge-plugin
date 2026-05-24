@@ -12,9 +12,8 @@ import uuid
 from collections import deque
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
 
-from aiohttp import ClientSession, ClientTimeout, web
+from aiohttp import web
 from gk_shims.logger_shim import get_logger
 from .kernel.core.utils.game_knowledge_analyzer import GameKnowledgeAnalyzer, _AI_REVIEW_PROMPT
 from gk_shims.llm_shim import LLMServiceClient
@@ -36,14 +35,12 @@ class GameKnowledgeWebServer:
         port: int,
         announcement_store_provider: Any = None,
         board_service_provider: Any = None,
-        qa_bridge_token: str = "",
     ) -> None:
         self._kernel_provider = kernel_provider
         self._host = host
         self._port = int(port)
         self._announcement_store_provider = announcement_store_provider
         self._board_service_provider = board_service_provider
-        self._qa_bridge_token = str(qa_bridge_token or "").strip()
         self._runner: web.AppRunner | None = None
         self._site: web.TCPSite | None = None
         self._auth_attempts: Dict[str, list[float]] = {}
@@ -61,10 +58,6 @@ class GameKnowledgeWebServer:
         assets_dir = _DIST_DIR / "assets"
         if assets_dir.is_dir():
             app.router.add_get("/assets/{tail:.*}", self._asset)
-        napcat_assets_dir = _DIST_DIR / "napcat-assets"
-        if napcat_assets_dir.is_dir():
-            app.router.add_static("/napcat-assets", napcat_assets_dir)
-
         # 仪表盘
         app.router.add_get("/api/game-knowledge/auth/bootstrap", self._auth_bootstrap_status)
         app.router.add_post("/api/game-knowledge/auth/bootstrap", self._auth_bootstrap)
@@ -86,7 +79,6 @@ class GameKnowledgeWebServer:
 
         # 搜索
         app.router.add_post("/api/game-knowledge/search", self._search)
-        app.router.add_post("/api/game-knowledge/qa-bridge", self._qa_bridge_search)
         app.router.add_get("/api/game-knowledge/search/random", self._random_search)
         app.router.add_get("/api/game-knowledge/search/hits/{hash}/card", self._get_search_hit_card)
         app.router.add_post("/api/game-knowledge/search/hits/{hash}/question", self._question_search_hit)
@@ -298,7 +290,6 @@ class GameKnowledgeWebServer:
             "/api/game-knowledge/auth/captcha/request",
             "/api/game-knowledge/auth/login",
             "/api/game-knowledge/auth/register",
-            "/api/game-knowledge/qa-bridge",
         }:
             return await handler(request)
 
@@ -509,14 +500,13 @@ class GameKnowledgeWebServer:
                 ip=ip,
                 user_agent=str(request.headers.get("User-Agent", "") or ""),
             )
-            send_detail = await self._send_registration_captcha(captcha)
             auth.store_registration_captcha(
                 username=str(captcha["username"]),
                 code=str(captcha["code"]),
                 expires_at=float(captcha["expires_at"]),
                 ip=ip,
                 user_agent=str(request.headers.get("User-Agent", "") or ""),
-                send_detail=send_detail,
+                send_detail="manual",
             )
         except CaptchaCooldownError as exc:
             return web.json_response(
@@ -530,52 +520,16 @@ class GameKnowledgeWebServer:
         except ValueError as exc:
             return self._error_response(str(exc), status=400)
         except Exception as exc:
-            logger.warning(f"发送注册验证码失败: {exc}")
-            return self._error_response("验证码发送失败，请确认 Yunzai/bs-plugin 已启动且机器人可私聊该 QQ", status=502)
+            logger.warning(f"创建注册验证码失败: {exc}")
+            return self._error_response("验证码创建失败，请稍后重试", status=500)
         return web.json_response(
             {
                 "success": True,
-                "message": "验证码已发送，请查看群临时会话或私聊",
+                "message": "验证码已生成，请联系管理员获取（已禁用外部发送桥）",
                 "cooldown_seconds": int(captcha.get("cooldown_seconds") or 3600),
                 "ttl_seconds": int(captcha.get("ttl_seconds") or 8 * 3600),
             }
         )
-
-    async def _send_registration_captcha(self, captcha: Dict[str, Any]) -> str:
-        bridge_url = str(captcha.get("bridge_url", "") or "").strip()
-        if not self._is_loopback_bridge_url(bridge_url):
-            raise ValueError("验证码桥接地址必须是本机地址")
-        headers = {"Content-Type": "application/json"}
-        token = str(captcha.get("bridge_token", "") or "").strip()
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        timeout = ClientTimeout(total=10)
-        payload = {
-            "group_id": str(captcha.get("group_id", "") or ""),
-            "user_id": str(captcha.get("username", "") or ""),
-            "code": str(captcha.get("code", "") or ""),
-            "ttl_seconds": int(captcha.get("ttl_seconds") or 8 * 3600),
-        }
-        async with ClientSession(timeout=timeout) as session:
-            async with session.post(bridge_url, json=payload, headers=headers) as response:
-                try:
-                    data = await response.json(content_type=None)
-                except Exception:
-                    data = {"message": await response.text()}
-                if response.status >= 400 or not data.get("success", data.get("ok", False)):
-                    message = str(data.get("error") or data.get("message") or "验证码桥接发送失败")
-                    raise ValueError(message)
-                detail = data.get("detail") if isinstance(data, dict) else None
-                return str(detail or "bs-plugin")
-
-    @staticmethod
-    def _is_loopback_bridge_url(raw_url: str) -> bool:
-        try:
-            parsed = urlparse(raw_url)
-        except Exception:
-            return False
-        host = (parsed.hostname or "").lower()
-        return parsed.scheme in {"http", "https"} and host in {"127.0.0.1", "localhost", "::1"}
 
     async def _auth_login(self, request: web.Request) -> web.Response:
         auth = await self._auth_service()
@@ -819,57 +773,6 @@ class GameKnowledgeWebServer:
             result = self._trim_search_result(result, requested_limit)
             result = self._refresh_search_summary(result)
         return web.json_response(result)
-
-    async def _qa_bridge_search(self, request: web.Request) -> web.Response:
-        """供 bs-plugin /QA 命令使用的轻量搜索桥。
-
-        - 只允许 loopback 调用
-        - 配置了 ``web.qa_bridge_token`` 时强制 Bearer 校验
-        - 不需要登录态；复用 ``_search`` 的检索流水线
-        """
-
-        from .kernel.core.runtime.sdk_memory_kernel import KernelSearchRequest
-
-        if not self._is_loopback_request(request):
-            return self._error_response("qa-bridge 仅允许本机调用", status=403)
-        if self._qa_bridge_token:
-            auth = str(request.headers.get("Authorization", "") or "").strip()
-            token = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
-            token = token or str(request.headers.get("X-GameKnowledge-Token", "") or "").strip()
-            if token != self._qa_bridge_token:
-                return self._error_response("qa-bridge 鉴权失败", status=401)
-
-        payload = await self._json(request)
-        query = str(payload.get("query", "") or "").strip()
-        if not query:
-            return self._error_response("query 不能为空", status=400)
-        if len(query) > 500:
-            return self._error_response("搜索内容过长，请控制在 500 字以内", status=400)
-
-        requested_limit = self._int_value(payload.get("limit", 12), 12, minimum=1, maximum=20)
-        internal_limit = min(200, max(requested_limit, requested_limit * 4))
-        kernel = await self._kernel()
-        result = await kernel.search_memory(
-            KernelSearchRequest(
-                query=query,
-                mode=str(payload.get("mode", "aggregate") or "aggregate"),
-                limit=internal_limit,
-                chat_id=str(payload.get("chat_id", "") or ""),
-            )
-        )
-        store = kernel.metadata_store
-        if store is not None:
-            result = self._decorate_search_result(store, result)
-            result = self._rank_search_result(query, result)
-            result = self._trim_search_result(result, requested_limit)
-            result = self._refresh_search_summary(result)
-        return web.json_response(result)
-
-    @staticmethod
-    def _is_loopback_request(request: web.Request) -> bool:
-        peer = request.transport.get_extra_info("peername") if request.transport else None
-        host = str(peer[0]).replace("::ffff:", "") if isinstance(peer, tuple) and peer else ""
-        return host in {"127.0.0.1", "::1", "localhost"}
 
     async def _random_search(self, request: web.Request) -> web.Response:
         kernel = await self._kernel()
