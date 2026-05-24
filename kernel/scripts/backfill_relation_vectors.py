@@ -57,15 +57,15 @@ if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
     _build_arg_parser().print_help()
     raise SystemExit(0)
 
-from game_knowledge.core.storage import (
+from kernel.core.storage import (
     VectorStore,
     GraphStore,
     MetadataStore,
     QuantizationType,
     SparseMatrixFormat,
 )
-from game_knowledge.core.embedding import create_embedding_api_adapter
-from game_knowledge.core.utils.relation_write_service import RelationWriteService
+from kernel.core.embedding import create_embedding_api_adapter
+from kernel.core.utils.relation_write_service import RelationWriteService
 
 
 def _load_config(config_path: Path) -> Dict[str, Any]:

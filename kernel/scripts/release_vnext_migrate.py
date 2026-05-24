@@ -61,8 +61,8 @@ if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
     raise SystemExit(0)
 
 try:
-    from game_knowledge.core.storage import GraphStore, KnowledgeType, MetadataStore, QuantizationType, VectorStore
-    from game_knowledge.core.storage.metadata_store import (
+    from kernel.core.storage import GraphStore, KnowledgeType, MetadataStore, QuantizationType, VectorStore
+    from kernel.core.storage.metadata_store import (
         RUNTIME_AUTO_MIGRATION_MIN_SCHEMA_VERSION,
         SCHEMA_VERSION,
     )

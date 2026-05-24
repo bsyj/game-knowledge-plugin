@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 
 from _bootstrap import DEFAULT_DATA_DIR, resolve_repo_path
-from game_knowledge.core.storage import MetadataStore  # noqa: E402
+from kernel.core.storage import MetadataStore  # noqa: E402
 
 
 def backfill(

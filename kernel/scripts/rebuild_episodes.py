@@ -15,8 +15,8 @@ try:
 except Exception:  # pragma: no cover
     tomlkit = None
 
-from game_knowledge.core.storage import MetadataStore
-from game_knowledge.core.utils.episode_service import EpisodeService
+from kernel.core.storage import MetadataStore
+from kernel.core.utils.episode_service import EpisodeService
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:

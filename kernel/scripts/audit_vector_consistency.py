@@ -42,9 +42,9 @@ if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
     sys.exit(0)
 
 try:
-    from game_knowledge.core.storage.vector_store import VectorStore
-    from game_knowledge.core.storage.metadata_store import MetadataStore
-    from game_knowledge.core.storage import QuantizationType
+    from kernel.core.storage.vector_store import VectorStore
+    from kernel.core.storage.metadata_store import MetadataStore
+    from kernel.core.storage import QuantizationType
 except Exception as e:  # pragma: no cover
     print(f"❌ 导入核心模块失败: {e}")
     sys.exit(1)

@@ -46,8 +46,8 @@ if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
     _build_arg_parser().print_help()
     raise SystemExit(0)
 
-from game_knowledge.core.runtime.lifecycle_orchestrator import initialize_storage_async
-from game_knowledge.core.utils.runtime_self_check import run_embedding_runtime_self_check
+from kernel.core.runtime.lifecycle_orchestrator import initialize_storage_async
+from kernel.core.utils.runtime_self_check import run_embedding_runtime_self_check
 
 
 def _load_config(path: Path) -> dict[str, Any]:
