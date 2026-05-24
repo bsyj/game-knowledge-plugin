@@ -1,0 +1,21 @@
+GameKnowledge Plugin
+
+Copyright (C) 2026 bsyj
+
+This project is licensed under the GNU General Public License v3.0 or later.
+
+You may redistribute and/or modify this project under the terms of the GNU
+General Public License as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version.
+
+This project is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.
+
+See the GNU General Public License v3.0 text:
+https://www.gnu.org/licenses/gpl-3.0.html
+
+Additional notes:
+
+- The bundled `kernel/` directory retains upstream license and grant files.
+- See `kernel/LICENSE` and `kernel/LICENSE-MAIBOT-GPL.md` for those notices.

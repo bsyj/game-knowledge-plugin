@@ -505,4 +505,6 @@ Embedding 报错：
 
 ## 许可证
 
-本项目使用 GPL-3.0-or-later。详见 [kernel/LICENSE](kernel/LICENSE) 及相关许可证文件。
+本项目使用 GPL-3.0-or-later。详见 [LICENSE](LICENSE)。
+
+`kernel/` 目录保留上游许可与授权说明，详见 [kernel/LICENSE](kernel/LICENSE) 和 [kernel/LICENSE-MAIBOT-GPL.md](kernel/LICENSE-MAIBOT-GPL.md)。
