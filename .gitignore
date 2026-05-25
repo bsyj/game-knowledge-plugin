@@ -45,3 +45,4 @@ _fix_imports2.py
 .env
 .venv/
 venv/
+config.toml

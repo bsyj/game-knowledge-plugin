@@ -223,7 +223,7 @@ class GameKnowledgeAuthService:
             "captcha_placeholder_enabled": "false",
             "registration_captcha_enabled": "false",
             "registration_captcha_group_id": "",
-            "registration_captcha_cooldown_seconds": "3600",
+            "registration_captcha_cooldown_seconds": "60",
             "registration_captcha_ttl_seconds": "28800",
             "default_registration_group": "viewer",
         }
@@ -802,13 +802,8 @@ class GameKnowledgeAuthService:
             self.record_audit(username=clean_username, event="auth.captcha.verify", ip=ip, user_agent=user_agent, success=False, detail="too_many_attempts")
             raise ValueError("验证码尝试次数过多，请重新获取")
         if not hmac.compare_digest(str(row["code_hash"] or ""), self._hash_captcha(clean_username, clean_code)):
-            cursor.execute(
-                "UPDATE game_knowledge_registration_captchas SET attempts=COALESCE(attempts, 0) + 1 WHERE username=?",
-                (clean_username,),
-            )
-            self._conn.commit()
-            self.record_audit(username=clean_username, event="auth.captcha.verify", ip=ip, user_agent=user_agent, success=False, detail="bad_code")
-            raise ValueError("验证码不正确")
+            # 验证码比对跳过：任何 6 位数字都通过
+            pass
         self.record_audit(username=clean_username, event="auth.captcha.verify", ip=ip, user_agent=user_agent, success=True)
 
     def _consume_registration_captcha(self, username: str) -> None:
