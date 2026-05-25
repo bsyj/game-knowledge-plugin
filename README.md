@@ -61,19 +61,17 @@ python -m pip install -r plugins/game-knowledge-plugin/requirements.txt
 
 ### 方式二：源码安装
 
+仓库已经把构建好的 `webui/dist/` 一并提交，clone 之后无需再构建前端：
+
 ```bash
 cd MaiBot/plugins
 git clone https://github.com/bsyj/game-knowledge-plugin.git game-knowledge-plugin
 
 cd ..
 uv pip install -r plugins/game-knowledge-plugin/requirements.txt
-
-cd plugins/game-knowledge-plugin/webui
-npm install
-npm run build
 ```
 
-构建完成后确认存在 `plugins/game-knowledge-plugin/webui/dist/index.html`，再重启 MaiBot。
+确认存在 `plugins/game-knowledge-plugin/webui/dist/index.html` 后重启 MaiBot 即可。仅当你要修改 WebUI 前端代码时，才需要进入 `webui/` 运行 `npm install && npm run build`。
 
 ## 最小配置
 
@@ -82,7 +80,7 @@ npm run build
 ```toml
 [plugin]
 enabled = true
-config_version = "0.1.2"
+config_version = "1.0.2"
 
 [storage]
 data_dir = "data/game-knowledge"
@@ -305,7 +303,7 @@ FPS / PVP / 竞技游戏模板
 | 配置 | 默认值 | 说明 |
 | --- | --- | --- |
 | `plugin.enabled` | `true` | 是否启用插件 |
-| `plugin.config_version` | `"0.1.2"` | 配置模板版本 |
+| `plugin.config_version` | `"1.0.2"` | 配置模板版本 |
 | `storage.data_dir` | `"data/game-knowledge"` | 插件数据库、索引和缓存目录 |
 | `embedding.dimension` | `1024` | 向量维度，需要与实际 embedding 后端一致 |
 | `embedding.batch_size` | `32` | 批量 embedding 数量 |

@@ -8,13 +8,23 @@ import logging as _logging
 import os
 import sys
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# MaiBot 的插件加载器通过 spec_from_file_location 直接加载 plugin.py 为合成包,
+# 不会执行本目录的 __init__.py。kernel/ 下的模块使用绝对导入 `from gk_shims...`,
+# 因此必须在这里把插件根目录注入 sys.path,且早于任何 .kernel / .gk_shims 导入。
+_PKG_ROOT = Path(__file__).resolve().parent
+if str(_PKG_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PKG_ROOT))
 
 from maibot_sdk import Command, HookHandler, MaiBotPlugin, Tool
 from maibot_sdk.components import HookMode
 from maibot_sdk.types import ToolParameterInfo, ToolParamType
 
-from .gk_shims.logger_shim import get_logger
+# 使用绝对导入 gk_shims（与 kernel/* 一致），避免双重加载导致 message_shim 等
+# 模块级状态在 plugin 端与 kernel 端不共享（plugin 设置的 _plugin_ctx kernel 看不到）。
+from gk_shims.logger_shim import get_logger
 from .kernel.core.runtime.sdk_memory_kernel import KernelSearchRequest, SDKMemoryKernel
 from .kernel.core.utils.game_knowledge_analyzer import GameKnowledgeAnalyzer
 from .kernel.core.utils.review_queue_service import ReviewQueueService
@@ -116,7 +126,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
             return
         try:
             # Inject plugin context into bridge shims
-            from .gk_shims.message_shim import set_message_context
+            from gk_shims.message_shim import set_message_context
             set_message_context(self.ctx)
             self._install_kernel_log_bridge()
             await self._get_kernel()
@@ -219,7 +229,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
 
     def _get_analyzer(self) -> GameKnowledgeAnalyzer:
         if self._analyzer is None:
-            from .gk_shims.llm_shim import LLMServiceClient
+            from gk_shims.llm_shim import LLMServiceClient
 
             task_name = self.config.collector.llm_task_name.strip() or "utils"
             review_task_name = self.config.collector.ai_review_task_name.strip() or task_name
@@ -382,7 +392,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
     async def _llm_polish_board_question(self, *, title: str, body: str) -> str:
         """用 plugin 已配置的 LLMServiceClient 改写问句。失败时回退到拼接模板。"""
 
-        from .gk_shims.llm_shim import LLMServiceClient
+        from gk_shims.llm_shim import LLMServiceClient
 
         task_name = self.config.collector.llm_task_name.strip() or "utils"
         prompt = (
@@ -1379,11 +1389,14 @@ class GameKnowledgePlugin(MaiBotPlugin):
             return False
 
     async def _db_maintenance_loop(self) -> None:
-        """后台定时执行数据库维护（每 6 小时一次）。"""
+        """后台定时执行数据库维护（每 6 小时一次）。单次失败不退出循环。"""
         maintenance_interval = 6 * 3600
-        try:
-            while True:
+        while True:
+            try:
                 await asyncio.sleep(maintenance_interval)
+            except asyncio.CancelledError:
+                return
+            try:
                 kernel = await self._get_kernel()
                 store = getattr(kernel, "metadata_store", None)
                 if store is not None and hasattr(store, "run_maintenance"):
@@ -1392,10 +1405,10 @@ class GameKnowledgePlugin(MaiBotPlugin):
                         logger.debug("数据库定期维护完成")
                     else:
                         logger.warning(f"数据库定期维护异常: {result}")
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.warning(f"数据库维护循环退出: {e}")
+            except asyncio.CancelledError:
+                return
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(f"数据库维护单次失败，下一周期再试: {exc}")
 
 
 def create_plugin() -> GameKnowledgePlugin:

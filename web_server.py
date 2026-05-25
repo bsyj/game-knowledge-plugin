@@ -14,9 +14,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from aiohttp import web
-from .gk_shims.logger_shim import get_logger
+# 使用绝对导入 gk_shims（与 kernel/* 一致），保证 message_shim 等模块级状态在
+# plugin / web / kernel 三层共享同一份对象。
+from gk_shims.logger_shim import get_logger
 from .kernel.core.utils.game_knowledge_analyzer import GameKnowledgeAnalyzer, _AI_REVIEW_PROMPT
-from .gk_shims.llm_shim import LLMServiceClient
+from gk_shims.llm_shim import LLMServiceClient
 
 from .auth_service import CaptchaCooldownError, GameKnowledgeAuthService
 from .revision_service import GameKnowledgeRevisionService
