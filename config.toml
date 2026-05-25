@@ -1,6 +1,6 @@
 [plugin]
 enabled = true
-config_version = "0.1.2"
+config_version = "1.0.2"
 
 [storage]
 data_dir = "data/game-knowledge"
@@ -27,7 +27,6 @@ pending_max_retry = 3
 
 [collector]
 enabled = true
-# 群 ID 白名单：只采集/分析这些群的消息；留空表示不限制
 allowed_source_group_ids = []
 auto_analyze_threshold = 30
 min_message_length = 3
@@ -41,4 +40,3 @@ ai_review_error_status = "pending"
 enable_auto_save = true
 auto_save_interval_minutes = 5
 debug = false
-notify_observer_group = false

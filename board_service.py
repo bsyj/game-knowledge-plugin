@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-from gk_shims.logger_shim import get_logger
+from .gk_shims.logger_shim import get_logger
 
 from .board_store import BoardStore
 

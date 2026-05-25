@@ -14,7 +14,7 @@ from maibot_sdk import Command, HookHandler, MaiBotPlugin, Tool
 from maibot_sdk.components import HookMode
 from maibot_sdk.types import ToolParameterInfo, ToolParamType
 
-from gk_shims.logger_shim import get_logger
+from .gk_shims.logger_shim import get_logger
 from .kernel.core.runtime.sdk_memory_kernel import KernelSearchRequest, SDKMemoryKernel
 from .kernel.core.utils.game_knowledge_analyzer import GameKnowledgeAnalyzer
 from .kernel.core.utils.review_queue_service import ReviewQueueService
@@ -116,7 +116,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
             return
         try:
             # Inject plugin context into bridge shims
-            from gk_shims.message_shim import set_message_context
+            from .gk_shims.message_shim import set_message_context
             set_message_context(self.ctx)
             self._install_kernel_log_bridge()
             await self._get_kernel()
@@ -219,7 +219,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
 
     def _get_analyzer(self) -> GameKnowledgeAnalyzer:
         if self._analyzer is None:
-            from gk_shims.llm_shim import LLMServiceClient
+            from .gk_shims.llm_shim import LLMServiceClient
 
             task_name = self.config.collector.llm_task_name.strip() or "utils"
             review_task_name = self.config.collector.ai_review_task_name.strip() or task_name
@@ -382,7 +382,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
     async def _llm_polish_board_question(self, *, title: str, body: str) -> str:
         """用 plugin 已配置的 LLMServiceClient 改写问句。失败时回退到拼接模板。"""
 
-        from gk_shims.llm_shim import LLMServiceClient
+        from .gk_shims.llm_shim import LLMServiceClient
 
         task_name = self.config.collector.llm_task_name.strip() or "utils"
         prompt = (
