@@ -70,9 +70,14 @@ class LLMServiceClient:
         if self._plugin_ctx is None:
             return {"success": False, "error": "LLM context not initialized"}
         try:
+            # Always pass task_name as model to ensure MaiBot SDK resolves
+            # the correct task config instead of falling back to the first
+            # available task alphabetically (e.g. "embedding").
+            effective_model = str(kwargs.get("model") or self._task_name)
             result = await self._plugin_ctx.llm.generate(
                 prompt=prompt,
-                **{k: v for k, v in kwargs.items() if k in ("model", "temperature", "max_tokens")},
+                model=effective_model,
+                **{k: v for k, v in kwargs.items() if k in ("temperature", "max_tokens")},
             )
             return result if isinstance(result, dict) else {"success": True, "response": str(result)}
         except Exception as exc:

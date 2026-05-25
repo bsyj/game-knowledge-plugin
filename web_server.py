@@ -35,12 +35,14 @@ class GameKnowledgeWebServer:
         port: int,
         announcement_store_provider: Any = None,
         board_service_provider: Any = None,
+        plugin_ctx_provider: Any = None,
     ) -> None:
         self._kernel_provider = kernel_provider
         self._host = host
         self._port = int(port)
         self._announcement_store_provider = announcement_store_provider
         self._board_service_provider = board_service_provider
+        self._plugin_ctx_provider = plugin_ctx_provider
         self._runner: web.AppRunner | None = None
         self._site: web.TCPSite | None = None
         self._auth_attempts: Dict[str, list[float]] = {}
@@ -1974,7 +1976,10 @@ class GameKnowledgeWebServer:
             status="approved",
             prioritize_review_risk=True,
         )
-        review_client = LLMServiceClient(task_name=task_name)
+        review_client = LLMServiceClient(
+            task_name=task_name,
+            plugin_ctx=self._plugin_ctx_provider() if self._plugin_ctx_provider else None,
+        )
         async with self._quality_tuning_lock:
             task = self._quality_tuning_tasks.get(task_id)
             if task:

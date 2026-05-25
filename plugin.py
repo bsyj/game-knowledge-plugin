@@ -393,7 +393,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
             f"提问内容：{body or '（无内容）'}"
         )
         try:
-            client = LLMServiceClient(task_name=task_name)
+            client = LLMServiceClient(task_name=task_name, plugin_ctx=self.ctx)
             result = await client.generate_response(prompt=prompt)
             text = ""
             for attr in ("response", "content", "text"):
@@ -542,6 +542,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
             port=int(self.config.web.port),
             announcement_store_provider=self._get_announcement_store,
             board_service_provider=self._get_board_service,
+            plugin_ctx_provider=lambda: self.ctx,
         )
         try:
             await web.start()
@@ -558,6 +559,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
                         port=int(self.config.web.port),
                         announcement_store_provider=self._get_announcement_store,
                         board_service_provider=self._get_board_service,
+                        plugin_ctx_provider=lambda: self.ctx,
                     )
                     try:
                         await retry_web.start()
@@ -702,6 +704,10 @@ class GameKnowledgePlugin(MaiBotPlugin):
             _tool_param("external_id", ToolParamType.STRING, "外部幂等 ID", True),
             _tool_param("text", ToolParamType.STRING, "知识正文", True),
             _tool_param("chat_id", ToolParamType.STRING, "聊天流 ID", False),
+            _tool_param("tags", ToolParamType.STRING, "标签，逗号分隔", False),
+            _tool_param("metadata", ToolParamType.STRING, "元数据 JSON 字符串", False),
+            _tool_param("relations", ToolParamType.STRING, "关系 JSON 数组字符串", False),
+            _tool_param("entities", ToolParamType.STRING, "实体，逗号分隔", False),
         ],
     )
     async def handle_ingest_game_knowledge(
@@ -1064,7 +1070,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
 
         if stream_id:
             await self.ctx.send.text(result, stream_id)
-        return True, result, True
+        return True, result, 2
 
     def _cmd_help(self) -> str:
         return (
@@ -1214,10 +1220,10 @@ class GameKnowledgePlugin(MaiBotPlugin):
         """采集群聊消息到缓冲区，达到阈值后自动分析。"""
         del hook_name, kwargs
         if not self.config.plugin.enabled:
-            logger.warning("插件已禁用，跳过消息采集")
+            self.ctx.logger.warning("插件已禁用，跳过消息采集")
             return
         if not self.config.collector.enabled:
-            logger.warning("采集器已禁用，跳过消息采集（建议开启: collector.enabled=true）")
+            self.ctx.logger.warning("采集器已禁用，跳过消息采集（建议开启: collector.enabled=true）")
             return
         runtime_stream_id = self._extract_runtime_stream_id(message)
         stream_id = runtime_stream_id or self._extract_stream_id(message)
@@ -1229,10 +1235,10 @@ class GameKnowledgePlugin(MaiBotPlugin):
         if platform and user_id:
             # is_bot_self import removed - use local helper instead
             if self._check_is_bot_self(platform, user_id):
-                logger.debug(f"跳过机器人自身消息采集: platform={platform}, stream={stream_id}")
+                self.ctx.logger.debug(f"跳过机器人自身消息采集: platform={platform}, stream={stream_id}")
                 return
         if not self._is_group_whitelisted(group_id):
-            logger.debug(f"跳过非白名单群消息采集: group={group_id or '(empty)'}, stream={stream_id}")
+            self.ctx.logger.debug(f"跳过非白名单群消息采集: group={group_id or '(empty)'}, stream={stream_id}")
             return
         normalized_message = self._normalize_message_for_buffer(message)
         content = normalized_message["content"]

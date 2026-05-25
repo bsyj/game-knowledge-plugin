@@ -749,7 +749,7 @@ class SDKMemoryKernel:
             graph_store=self.graph_store,
             metadata_store=self.metadata_store,
             embedding_manager=self.embedding_manager,
-            plugin_config=runtime_config,
+            plugin_config={**runtime_config, "plugin_ctx": self.plugin_ctx},
         )
         self.import_task_manager = ImportTaskManager(self._runtime_facade)
         self.retrieval_tuning_manager = RetrievalTuningManager(
@@ -767,6 +767,10 @@ class SDKMemoryKernel:
                 raise RuntimeError(f"{message}；请改回原 embedding 配置，或执行重嵌入/重建向量。")
         else:
             self._set_embedding_degraded(active=False, checked_at=float(report.get("checked_at") or time.time()))
+
+        # 注入 plugin_ctx 供 model_routing 等内部组件使用
+        from ..utils.model_routing import set_model_routing_plugin_context
+        set_model_routing_plugin_context(self.plugin_ctx)
 
         self._initialized = True
         await self._start_background_tasks()
@@ -3112,6 +3116,7 @@ class SDKMemoryKernel:
                 self._feedback_classifier = LLMServiceClient(
                     task_name="utils",
                     request_type="memory_feedback_correction",
+                    plugin_ctx=self.plugin_ctx,
                 )
             response = await self._feedback_classifier.generate_response(prompt)
             payload = self._safe_json_loads(getattr(response, "response", ""))

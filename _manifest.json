@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "id": "bsyj.game-knowledge-plugin",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "GameKnowledge",
   "description": "Industrial-grade game knowledge analysis, storage, graph, and retrieval plugin for MaiBot.",
   "author": {
@@ -23,7 +23,26 @@
     "min_version": "2.0.0",
     "max_version": "2.99.99"
   },
-  "dependencies": [],
+  "dependencies": [
+    {"type": "python_package", "name": "numpy", "version_spec": ">=1.20.0"},
+    {"type": "python_package", "name": "scipy", "version_spec": ">=1.7.0"},
+    {"type": "python_package", "name": "networkx", "version_spec": ">=3.0.0"},
+    {"type": "python_package", "name": "pyarrow", "version_spec": ">=10.0.0"},
+    {"type": "python_package", "name": "pandas", "version_spec": ">=1.5.0"},
+    {"type": "python_package", "name": "nest-asyncio", "version_spec": ">=1.5.0"},
+    {"type": "python_package", "name": "faiss-cpu", "version_spec": ">=1.7.0"},
+    {"type": "python_package", "name": "uvicorn", "version_spec": ">=0.20.0"},
+    {"type": "python_package", "name": "pydantic", "version_spec": ">=2.0.0"},
+    {"type": "python_package", "name": "python-multipart", "version_spec": ">=0.0.9"},
+    {"type": "python_package", "name": "openai", "version_spec": ">=1.0.0"},
+    {"type": "python_package", "name": "json-repair", "version_spec": ">=0.30.0"},
+    {"type": "python_package", "name": "aiohttp", "version_spec": ">=3.8.0"},
+    {"type": "python_package", "name": "psutil", "version_spec": ">=5.9.0"},
+    {"type": "python_package", "name": "tomlkit", "version_spec": ">=0.12.0"},
+    {"type": "python_package", "name": "rich", "version_spec": ">=14.0.0"},
+    {"type": "python_package", "name": "tenacity", "version_spec": ">=8.0.0"},
+    {"type": "python_package", "name": "jieba", "version_spec": ">=0.42.1"}
+  ],
   "capabilities": [
     "send.text",
     "chat.get_stream_by_group_id",

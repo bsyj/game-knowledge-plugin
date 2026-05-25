@@ -442,15 +442,35 @@ class SummaryImporter:
             logger.info(f"总结模型任务: {task_name_to_use}")
             logger.info(f"总结模型候选列表: {model_config_to_use.model_list}")
 
-            result = await llm_api.generate(
-                llm_api.LLMServiceRequest(
-                    task_name=task_name_to_use,
-                    request_type="GameKnowledge.ChatSummarization",
-                    prompt=prompt,
-                    temperature=getattr(model_config_to_use, "temperature", None),
-                    max_tokens=getattr(model_config_to_use, "max_tokens", None),
+            # 插件模式：通过宿主 SDK 调用
+            plugin_ctx = self.plugin_config.get("plugin_ctx") if isinstance(self.plugin_config, dict) else None
+            if plugin_ctx is not None:
+                llm_proxy = getattr(plugin_ctx, "llm", None)
+                sdk_generate = getattr(llm_proxy, "generate", None)
+                if callable(sdk_generate):
+                    raw = await sdk_generate(
+                        prompt=prompt,
+                        model=task_name_to_use,
+                        temperature=getattr(model_config_to_use, "temperature", None),
+                        max_tokens=getattr(model_config_to_use, "max_tokens", None),
+                    )
+                    if isinstance(raw, dict) and raw.get("success") is False:
+                        return False, str(raw.get("error") or "宿主 LLM 调用失败")
+                    result = llm_api.LLMServiceResult.from_response_result(
+                        raw if isinstance(raw, dict) else {"response": str(raw)}
+                    )
+                else:
+                    return False, "宿主 LLM 能力不可用"
+            else:
+                result = await llm_api.generate(
+                    llm_api.LLMServiceRequest(
+                        task_name=task_name_to_use,
+                        request_type="GameKnowledge.ChatSummarization",
+                        prompt=prompt,
+                        temperature=getattr(model_config_to_use, "temperature", None),
+                        max_tokens=getattr(model_config_to_use, "max_tokens", None),
+                    )
                 )
-            )
             success = bool(result.success)
             response = str(result.completion.response or "")
 

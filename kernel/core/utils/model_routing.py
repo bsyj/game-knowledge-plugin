@@ -9,6 +9,16 @@ from gk_shims import llm_shim as llm_api
 
 logger = get_logger("GameKnowledge.ModelRouting")
 
+# 模块级 plugin_ctx，由宿主在初始化时注入
+_plugin_ctx: Any = None
+
+
+def set_model_routing_plugin_context(ctx: Any) -> None:
+    """注入插件上下文，供 generate_with_resolved_model 在插件模式下使用。"""
+    global _plugin_ctx
+    _plugin_ctx = ctx
+
+
 NON_TEXT_GENERATION_TASK_NAMES = {"embedding", "voice", "vlm"}
 GAME_KNOWLEDGE_TEXT_TASK_PRIORITY = (
     "memory",
@@ -140,9 +150,39 @@ async def generate_with_resolved_model(
     *,
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
+    plugin_ctx: Any = None,
 ) -> LLMServiceResult:
-    """按 GameKnowledge 解析出的模型执行文本生成。"""
+    """按 GameKnowledge 解析出的模型执行文本生成。
 
+    在插件模式下通过 plugin_ctx.llm.generate() 调用宿主 LLM 能力；
+    在独立内核模式下使用 llm_api (shim) 的客户端。
+    """
+    ctx = plugin_ctx or _plugin_ctx
+
+    # ── 插件模式：通过宿主 SDK 调用 ──────────────────────────────
+    if ctx is not None:
+        llm_proxy = getattr(ctx, "llm", None)
+        sdk_generate = getattr(llm_proxy, "generate", None)
+        if callable(sdk_generate):
+            try:
+                result = await sdk_generate(
+                    prompt=prompt,
+                    model=model.task_name,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                if isinstance(result, dict) and result.get("success") is False:
+                    return LLMServiceResult.from_error(
+                        str(result.get("error") or "宿主 LLM 调用失败"),
+                    )
+                return LLMServiceResult.from_response_result(
+                    result if isinstance(result, dict) else {"response": str(result)}
+                )
+            except Exception as exc:
+                logger.error(f"[GameKnowledge.ModelRouting] 插件模式调用失败: {exc}")
+                return LLMServiceResult.from_error(str(exc))
+
+    # ── 独立内核模式（旧路径，需完整 MaiBot 运行时）────────────────
     if not model.is_single_model:
         return await llm_api.generate(
             llm_api.LLMServiceRequest(
