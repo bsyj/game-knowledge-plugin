@@ -10,7 +10,7 @@ dimension = 1024
 batch_size = 32
 max_concurrent = 5
 model_name = "auto"
-enable_cache = true
+enable_cache = false
 min_train_threshold = 40
 
 [web]
