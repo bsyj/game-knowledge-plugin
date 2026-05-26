@@ -39,7 +39,7 @@ MaiBot/
     └── game-knowledge-plugin/
         ├── plugin.py
         ├── _manifest.json
-        ├── config.toml
+        ├── config.example.toml
         ├── requirements.txt
         └── webui/dist/
 ```
@@ -57,7 +57,14 @@ uv pip install -r plugins/game-knowledge-plugin/requirements.txt
 python -m pip install -r plugins/game-knowledge-plugin/requirements.txt
 ```
 
-重启 MaiBot 后，在插件管理中启用 GameKnowledge。
+初次安装需要从模板复制一份配置文件并重启 MaiBot：
+
+```bash
+cp config.example.toml config.toml
+# 按需编辑 config.toml，然后重启 MaiBot
+```
+
+重启后在插件管理中启用 GameKnowledge。
 
 ### 方式二：源码安装
 
@@ -75,7 +82,13 @@ uv pip install -r plugins/game-knowledge-plugin/requirements.txt
 
 ## 最小配置
 
-配置文件是插件目录下的 `config.toml`。默认配置已经可以启动，但正式使用前建议至少修改群白名单和 WebUI 监听地址。
+`config.example.toml` 是配置模板。首次使用请复制为 `config.toml` 再修改：
+
+```bash
+cp config.example.toml config.toml
+```
+
+默认配置已经可以启动，但正式使用前建议至少修改群白名单和 WebUI 监听地址。
 
 ```toml
 [plugin]
@@ -449,7 +462,7 @@ game-knowledge-plugin/
 ├── plugin.py
 ├── _manifest.json
 ├── config.py
-├── config.toml
+├── config.example.toml
 ├── requirements.txt
 ├── web_server.py
 ├── auth_service.py
