@@ -57,14 +57,7 @@ uv pip install -r plugins/game-knowledge-plugin/requirements.txt
 python -m pip install -r plugins/game-knowledge-plugin/requirements.txt
 ```
 
-初次安装需要从模板复制一份配置文件并重启 MaiBot：
-
-```bash
-cp config.example.toml config.toml
-# 按需编辑 config.toml，然后重启 MaiBot
-```
-
-重启后在插件管理中启用 GameKnowledge。
+重启后在插件管理中启用 GameKnowledge。首次加载时 MaiBot 会根据 Pydantic 默认值自动生成 `config.toml`。如需自定义配置，直接编辑该文件即可（`config.example.toml` 是配置模板，列出了所有可配置项）。
 
 ### 方式二：源码安装
 
@@ -82,11 +75,7 @@ uv pip install -r plugins/game-knowledge-plugin/requirements.txt
 
 ## 最小配置
 
-`config.example.toml` 是配置模板。首次使用请复制为 `config.toml` 再修改：
-
-```bash
-cp config.example.toml config.toml
-```
+MaiBot 首次加载插件时会自动生成 `config.toml`。`config.example.toml` 是配置模板供参考。
 
 默认配置已经可以启动，但正式使用前建议至少修改群白名单和 WebUI 监听地址。
 
