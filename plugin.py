@@ -116,6 +116,9 @@ class GameKnowledgePlugin(MaiBotPlugin):
         self._board_service: Optional[BoardService] = None
         self._message_buffer: Dict[str, List[Dict[str, Any]]] = {}
         self._auto_analyze_tasks: Dict[str, asyncio.Task[bool]] = {}
+        # 上一次"分析后无可入库卡片"的时间戳,用于触发后续退避,避免
+        # LLM 一直产空导致每条新消息都触发一次分析。
+        self._empty_analyze_until: Dict[str, float] = {}
         self._log_bridge: Optional[_KernelLogBridge] = None
         self._db_maintenance_task: Optional[asyncio.Task[None]] = None
         self._board_overdue_task: Optional[asyncio.Task[None]] = None
@@ -289,6 +292,10 @@ class GameKnowledgePlugin(MaiBotPlugin):
     BOARD_COLLECT_WINDOW_SECONDS: int = 20 * 60
     BOARD_COLLECT_MAX_MESSAGES: int = 20
     BOARD_LOOP_INTERVAL_SECONDS: int = 300
+
+    # 一次分析没产出任何可入库卡片后,同一 stream 暂停自动分析的时长。
+    # 避免群里持续闲聊导致每条新消息都触发一次 LLM 抽取(空跑 + 烧 token)。
+    EMPTY_ANALYZE_BACKOFF_SECONDS: float = 300.0
 
     async def _board_overdue_loop(self) -> None:
         """每 5 分钟扫描一次：处理 2 天无人回应的主题 + 处理 collecting 超时主题。"""
@@ -1322,6 +1329,9 @@ class GameKnowledgePlugin(MaiBotPlugin):
         active_task = self._auto_analyze_tasks.get(stream_id)
         if active_task is not None and not active_task.done():
             return
+        backoff_until = self._empty_analyze_until.get(stream_id, 0.0)
+        if backoff_until and time.time() < backoff_until:
+            return
         buffer = list(self._message_buffer.get(stream_id, []))
         if not buffer:
             return
@@ -1360,23 +1370,44 @@ class GameKnowledgePlugin(MaiBotPlugin):
         """自动分析缓冲区消息，返回 True 表示分析+提交成功。"""
         if not buffer:
             return False
+        short_stream = stream_id[:30]
         try:
             analyzer = self._get_analyzer()
             result = await analyzer.analyze_messages(buffer, stream_id=stream_id)
             cards = result.get("cards", [])
             if not cards:
+                raw = int(result.get("raw_card_count", 0) or 0)
+                dropped = int(result.get("dropped_card_count", 0) or 0)
+                ai_reviewed = int(result.get("ai_reviewed", 0) or 0)
+                ai_rejected = int(result.get("ai_rejected", 0) or 0)
+                ai_review_errors = int(result.get("ai_review_errors", 0) or 0)
+                logger.info(
+                    f"[GK分析] 本轮无可入库卡片: stream={short_stream} msgs={len(buffer)} "
+                    f"raw={raw} dropped={dropped} "
+                    f"ai_reviewed={ai_reviewed} ai_rejected={ai_rejected} "
+                    f"ai_review_errors={ai_review_errors},下一次触发将延后 "
+                    f"{int(self.EMPTY_ANALYZE_BACKOFF_SECONDS)}s"
+                )
+                self._empty_analyze_until[stream_id] = time.time() + self.EMPTY_ANALYZE_BACKOFF_SECONDS
                 self._restore_messages_to_buffer(stream_id, buffer)
                 return False
             if self._review_queue is None:
-                logger.warning(f"自动分析完成但审核队列未就绪: stream={stream_id}, cards={len(cards)}")
+                logger.warning(f"自动分析完成但审核队列未就绪: stream={short_stream}, cards={len(cards)}")
                 return False
             submit = await self._review_queue.submit_cards(cards, stream_id=stream_id)
             if submit.get("success", False):
-                logger.info(f"自动分析完成: stream={stream_id}, cards={len(cards)}")
+                submitted = int(submit.get("submitted", len(cards)) or len(cards))
+                logger.info(
+                    f"[GK分析] 自动分析完成: stream={short_stream} cards={len(cards)} "
+                    f"submitted={submitted} ai_reviewed={int(result.get('ai_reviewed', 0) or 0)} "
+                    f"ai_rejected={int(result.get('ai_rejected', 0) or 0)}"
+                )
+                self._empty_analyze_until.pop(stream_id, None)
                 return True
             else:
                 logger.warning(
-                    f"自动分析提交失败: stream={stream_id}, error={submit.get('error', '未知错误')}"
+                    f"[GK分析] 提交审核队列失败: stream={short_stream} cards={len(cards)} "
+                    f"error={submit.get('error', '未知错误')}"
                 )
                 self._restore_messages_to_buffer(stream_id, buffer)
                 return False
@@ -1384,7 +1415,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
             self._restore_messages_to_buffer(stream_id, buffer)
             raise
         except Exception as exc:
-            logger.warning(f"自动分析失败: {exc}")
+            logger.warning(f"[GK分析] 自动分析失败: stream={short_stream} error={exc}")
             self._restore_messages_to_buffer(stream_id, buffer)
             return False
 

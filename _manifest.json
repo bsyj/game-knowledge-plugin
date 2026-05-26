@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "id": "bsyj.game-knowledge-plugin",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "name": "GameKnowledge",
   "description": "Industrial-grade game knowledge analysis, storage, graph, and retrieval plugin for MaiBot.",
   "author": {

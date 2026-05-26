@@ -326,31 +326,65 @@ class GameKnowledgeAnalyzer:
             return {"success": True, "cards": [], "entities": [], "relations": [], "error": ""}
 
         text = self._format_messages(messages)
+        llm_ok = True
         try:
             result = await self._extract_with_llm(text)
         except Exception as exc:
-            logger.warning(f"LLM 提取失败: {exc}")
+            llm_ok = False
+            logger.warning(f"LLM 提取失败,回退规则: {exc}")
             result = self._extract_with_rules(text, messages)
 
         cards = result.get("knowledge_cards", [])
-        normalized_cards = []
+        if not isinstance(cards, list):
+            cards = []
+        raw_count = len(cards)
+        normalized_cards: List[Dict[str, Any]] = []
+        drop_count = 0
+        sample_drop: Dict[str, Any] = {}
         ai_reviewed = 0
         ai_rejected = 0
         ai_review_errors = 0
         for card in cards:
             if not isinstance(card, dict):
+                drop_count += 1
                 continue
             normalized = await self._normalize_card_with_llm(card, messages, stream_id)
-            if normalized:
-                review_result = await self._review_normalized_card(normalized, messages)
-                if review_result:
-                    ai_reviewed += 1
-                    normalized.update(review_result)
-                    if normalized.get("review_status") == "ai_rejected":
-                        ai_rejected += 1
-                    if str(normalized.get("ai_review_status", "")) == "error":
-                        ai_review_errors += 1
-                normalized_cards.append(normalized)
+            if not normalized:
+                drop_count += 1
+                if not sample_drop:
+                    sample_drop = {
+                        "title": str(card.get("title", "") or "")[:40],
+                        "question": str(card.get("question", "") or "")[:60],
+                        "answer": str(card.get("answer", "") or "")[:60],
+                        "needs_answer": bool(card.get("needs_answer", False)),
+                    }
+                continue
+            review_result = await self._review_normalized_card(normalized, messages)
+            if review_result:
+                ai_reviewed += 1
+                normalized.update(review_result)
+                if normalized.get("review_status") == "ai_rejected":
+                    ai_rejected += 1
+                if str(normalized.get("ai_review_status", "")) == "error":
+                    ai_review_errors += 1
+            normalized_cards.append(normalized)
+
+        if raw_count == 0:
+            logger.info(
+                f"[Analyzer] LLM 未产出 knowledge_cards (llm_ok={llm_ok}, msgs={len(messages)})"
+            )
+        elif drop_count and not normalized_cards:
+            logger.info(
+                f"[Analyzer] LLM 产 {raw_count} 张原始卡均被归一化规则拒绝; "
+                f"样本: title={sample_drop.get('title', '')!r} "
+                f"q={sample_drop.get('question', '')!r} "
+                f"a={sample_drop.get('answer', '')!r} "
+                f"needs_answer={sample_drop.get('needs_answer', False)}"
+            )
+        elif drop_count:
+            logger.info(
+                f"[Analyzer] 归一化阶段丢弃 {drop_count}/{raw_count} 张原始卡 (保留 {len(normalized_cards)})"
+            )
 
         return {
             "success": True,
@@ -358,6 +392,8 @@ class GameKnowledgeAnalyzer:
             "entities": result.get("entities", []),
             "relations": result.get("relations", []),
             "summary": result.get("summary", ""),
+            "raw_card_count": raw_count,
+            "dropped_card_count": drop_count,
             "ai_reviewed": ai_reviewed,
             "ai_rejected": ai_rejected,
             "ai_review_errors": ai_review_errors,
@@ -376,22 +412,52 @@ class GameKnowledgeAnalyzer:
         result = await self._llm_client.generate_response(
             prompt=f"{_LLM_SYSTEM_PROMPT}\n\n群聊内容:\n{text}",
         )
+        if isinstance(result, dict) and result.get("success") is False:
+            logger.warning(
+                f"[Analyzer] LLM 调用失败: {result.get('error', '未知错误')}"
+            )
         content = self._llm_text(result)
         parsed = self._parse_llm_output(content)
         if isinstance(parsed, list):
-            return {"knowledge_cards": parsed}
-        if isinstance(parsed, dict):
-            return parsed
-        return {}
+            payload = {"knowledge_cards": parsed}
+        elif isinstance(parsed, dict):
+            payload = parsed
+        else:
+            payload = {}
+
+        cards = payload.get("knowledge_cards") if isinstance(payload, dict) else None
+        # 当 LLM 没产卡时,记下原始返回内容前 400 字,便于排查"调用成功但产 0 卡"的根因
+        # (常见原因: 模型返回拒答语、空 JSON、自然语言而不是 JSON、被截断等)
+        if not isinstance(cards, list) or not cards:
+            sample = (content or "").strip().replace("\n", " ")[:400]
+            logger.info(
+                f"[Analyzer] LLM 原始返回前 400 字 (knowledge_cards 为空时排查用): {sample!r}"
+            )
+        return payload
 
     @staticmethod
     def _llm_text(result: Any) -> str:
-        """兼容 MaiBot LLMResponseResult(response=...) 与 OpenAI 风格 content 字段。"""
+        """兼容三种返回形态:
+        1. MaiBot 当前 LLMServiceClient 返回的 dict: {'success': bool, 'response': str, 'error': str, ...}
+        2. Pydantic / dataclass 风格对象: .response / .content / .text
+        3. 纯字符串
+        success=False 时返回空串以触发上游"未产卡"分支并记录日志。
+        """
+        if isinstance(result, dict):
+            if result.get("success") is False:
+                return ""
+            for key in ("response", "content", "text"):
+                value = result.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value
+            return ""
         for attr in ("response", "content", "text"):
             value = getattr(result, attr, None)
             if isinstance(value, str) and value.strip():
                 return value
-        return str(result)
+        if isinstance(result, str):
+            return result
+        return ""
 
     @staticmethod
     def _parse_llm_output(content: str) -> Any:
@@ -756,6 +822,18 @@ class GameKnowledgeAnalyzer:
             logger.warning(f"LLM 关键词精修失败，回退规则结果: {exc}")
         return rule_search_terms
 
+    @staticmethod
+    def _log_card_drop(reason: str, card: Dict[str, Any]) -> None:
+        """记录一张原始卡被归一化阶段丢弃的原因和样本字段,便于排查 prompt/规则失配。"""
+        title = str(card.get("title", "") or "")[:40]
+        question = str(card.get("question", "") or "")[:60]
+        answer = str(card.get("answer", "") or "")[:60]
+        needs_answer = bool(card.get("needs_answer", False))
+        logger.info(
+            f"[Normalize] drop card: reason={reason} title={title!r} "
+            f"q={question!r} a={answer!r} needs_answer={needs_answer}"
+        )
+
     def _normalize_card(
         self,
         card: Dict[str, Any],
@@ -768,20 +846,25 @@ class GameKnowledgeAnalyzer:
         needs_answer = bool(card.get("needs_answer", False))
         missing_answer_values = {"待补充", "【待补充】", "不知道", "不清楚", "可能吧", "信息不足", "无明确答案"}
         if (not answer or answer in missing_answer_values) and not needs_answer:
+            GameKnowledgeAnalyzer._log_card_drop("no_answer_and_not_needs_answer", card)
             return None
         if needs_answer and answer in missing_answer_values:
             answer = ""
         if not title:
             title = str(card.get("question", "") or "").strip()[:30] if needs_answer else answer[:30]
         if not title:
+            GameKnowledgeAnalyzer._log_card_drop("no_title", card)
             return None
 
         question = str(card.get("question", "") or "").strip()
         if not question:
+            GameKnowledgeAnalyzer._log_card_drop("no_question", card)
             return None
         if not GameKnowledgeAnalyzer._is_valid_question(question):
+            GameKnowledgeAnalyzer._log_card_drop("question_invalid", card)
             return None
         if answer and not GameKnowledgeAnalyzer._is_valid_answer(answer):
+            GameKnowledgeAnalyzer._log_card_drop("answer_invalid", card)
             return None
 
         combined_text = f"{title} {question} {answer}"
