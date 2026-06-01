@@ -9,11 +9,6 @@ from typing import Any, Iterable, List, Sequence, Set
 GLOBAL_NOISE_TERMS = {
     "",
     "game_knowledge",
-    "rlcraft",
-    "rlc",
-    "mc",
-    "minecraft",
-    "我的世界",
     "标签",
     "证据",
     "由检索结果",
@@ -316,7 +311,7 @@ def normalize_search_terms(
 
 
 def normalize_aliases(value: Any) -> List[str]:
-    global_aliases = {"rlcraft", "rlc", "mc", "minecraft", "我的世界"}
+    global_aliases = {"游戏", "手游", "端游"}
     aliases: List[str] = []
     for item in split_terms(value):
         text = normalize_text(item)
@@ -335,7 +330,6 @@ def iter_domain_terms(text: str) -> Iterable[str]:
 
 def iter_query_core_terms(text: str) -> Iterable[str]:
     cleaned = normalize_text(text)
-    cleaned = re.sub(r"\bRLCraft\b|\bRLC\b|\bMC\b|\bMinecraft\b|我的世界", " ", cleaned, flags=re.I)
     cleaned = VERSION_RE.sub(" ", cleaned)
     cleaned = QUERY_VERB_RE.sub(" ", cleaned)
     cleaned = re.sub(r"[？?。.!！,，、:：;；()（）【】\\[\\]\"'“”‘’]+", " ", cleaned)

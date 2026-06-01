@@ -76,7 +76,7 @@ def _make_card(**overrides: Any) -> Dict[str, Any]:
         "question": "测试问题是什么",
         "answer": "这是测试答案，包含足够的文本内容用于相似度检测和搜索测试。",
         "steps": [],
-        "tags": ["机制", "RLCraft"],
+        "tags": ["机制", "SampleGame"],
         "search_terms": ["测试", "卡片", "mechanic"],
         "aliases": ["tc"],
         "game_id": "",
@@ -94,7 +94,7 @@ def _make_card(**overrides: Any) -> Dict[str, Any]:
         "source_message_ids": [],
         "source_stream_id": "test_stream_001",
         "source_group_id": "100000001",
-        "source_group_name": "RLCraft",
+        "source_group_name": "SampleGame",
         "evidence": "测试证据",
         "created_by": "test_runner",
         "updated_by": "test_runner",
@@ -465,7 +465,7 @@ def run() -> int:
 
         # 标签过滤
         tc = store.upsert_knowledge_card(_make_card(
-            tags=["game_knowledge", "rlcraft", "机制", "mechanic"], card_hash="edge_tags"))
+            tags=["game_knowledge", "game", "机制", "mechanic"], card_hash="edge_tags"))
         tl = [t.lower() for t in tc.get("tags", [])]
         check("game_knowledge" not in tl, "泛词过滤")
 

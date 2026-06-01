@@ -17,7 +17,7 @@ const TEXT_FIELDS: { key: keyof CardItem; label: string; multiline?: boolean }[]
   { key: "category", label: "分类" },
   { key: "answer_type", label: "答案类型" },
   { key: "valid_status", label: "有效状态" },
-  { key: "rlcraft_version", label: "RLCraft 版本" },
+  { key: "rlcraft_version", label: "游戏版本" },
   { key: "question", label: "Q", multiline: true },
   { key: "answer", label: "A", multiline: true },
   { key: "evidence", label: "证据/来源说明", multiline: true },

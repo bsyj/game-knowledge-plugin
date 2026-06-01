@@ -62,7 +62,28 @@ class MetadataStore:
         db_name: 数据库文件名（默认metadata.db）
     """
 
-    _GLOBAL_CARD_TAGS = {"rlcraft", "rlc", "mc", "minecraft", "我的世界", "游戏", "游戏知识", "game_knowledge", "知识", "问题", "答案"}
+    _GLOBAL_CARD_TAGS = {"游戏", "游戏知识", "game_knowledge", "知识", "问题", "答案"}
+    _KNOWLEDGE_CARD_SEARCH_STOP_TERMS = {
+        "什么", "怎么", "如何", "哪里", "在哪", "多少", "吗", "嘛", "呢", "啊",
+        "获取", "获得", "得到", "掉落", "推荐", "解决", "处理", "配置", "设置",
+        "使用", "需要", "可以", "能用", "能不能", "有没有", "是否", "区别",
+        "作用", "效果", "方法", "方式", "攻略", "机制", "问题", "报错",
+    }
+    _LOW_SIGNAL_CARD_QUERY_TERMS = {
+        "等级", "经验", "附魔", "词条", "流派", "装备", "武器", "材料", "机制",
+        "深渊", "高塔", "虚空", "发电机", "boss", "属性", "技能", "任务",
+    }
+    _KNOWLEDGE_CARD_HIGH_SIGNAL_FIELDS = frozenset({"search_terms", "aliases", "title", "question"})
+    _KNOWLEDGE_CARD_FIELD_WEIGHTS = (
+        ("search_terms", 10.0),
+        ("aliases", 9.5),
+        ("title", 9.0),
+        ("question", 8.0),
+        ("answer", 2.5),
+        ("rlcraft_version", 3.0),
+        ("tags", 2.0),
+        ("category", 1.5),
+    )
     _STRUCTURAL_CARD_TAGS = {
         "攻略", "机制", "推荐", "配置", "报错", "装备", "版本", "模组", "掉落", "位置", "其他",
         "error_fix", "config", "recommendation", "guide", "mechanic", "location", "drop", "other",
@@ -9109,24 +9130,157 @@ class MetadataStore:
         return deleted
 
     def search_knowledge_cards(self, keyword: str, limit: int = 20) -> List[Dict[str, Any]]:
-        """按关键词模糊搜索卡片标题/问题/答案。"""
-        if not self._conn or not keyword.strip():
+        """按关键词搜索已审核卡片。
+
+        玩家自然提问通常带有“怎么/哪里/获得”这类意图词。这里先用完整查询
+        和核心词扩大召回，再按卡片字段权重重排，避免精确标题或人工关键词被
+        普通 answer 子串命中淹没。
+        """
+        clean_keyword = str(keyword or "").strip()
+        if not self._conn or not clean_keyword:
             return []
         self._ensure_knowledge_cards_table()
-        like = f"%{keyword.strip()}%"
+
+        tokens = self._knowledge_card_search_tokens(clean_keyword)
+        like_terms = [clean_keyword] + [token for token in tokens if token != clean_keyword.lower()]
+        like_terms = [term for term in dict.fromkeys(like_terms) if term][:16]
+        if not like_terms:
+            return []
+
+        searchable_columns = (
+            "title",
+            "question",
+            "answer",
+            "tags_json",
+            "search_terms_json",
+            "aliases_json",
+            "rlcraft_version",
+            "answer_type",
+            "category",
+        )
+        predicates: List[str] = []
+        params: List[Any] = []
+        for term in like_terms:
+            predicates.append("(" + " OR ".join(f"{column} LIKE ?" for column in searchable_columns) + ")")
+            params.extend([f"%{term}%"] * len(searchable_columns))
+
+        query_limit = max(1, int(limit)) * 8
+        params.append(query_limit)
         cursor = self._conn.cursor()
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT * FROM game_knowledge_cards
             WHERE review_status = 'approved'
-              AND (title LIKE ? OR question LIKE ? OR answer LIKE ? OR tags_json LIKE ?
-                   OR search_terms_json LIKE ? OR aliases_json LIKE ? OR rlcraft_version LIKE ?)
+              AND ({' OR '.join(predicates)})
             ORDER BY
               CASE WHEN valid_status='active' THEN 0 WHEN valid_status IN ('stale','deprecated') THEN 1 ELSE 2 END,
-              CASE WHEN question LIKE ? OR tags_json LIKE ? OR search_terms_json LIKE ? OR aliases_json LIKE ? THEN 0 ELSE 1 END,
               confidence DESC, updated_at DESC
             LIMIT ?
-        """, (like, like, like, like, like, like, like, like, like, like, like, limit))
-        return [self._knowledge_card_row_to_dict(row) for row in cursor.fetchall()]
+        """, tuple(params))
+        cards = [self._knowledge_card_row_to_dict(row) for row in cursor.fetchall()]
+        for card in cards:
+            card["_search_score"] = self._score_knowledge_card_keyword(card, clean_keyword, tokens)
+        cards.sort(key=lambda card: float(card.get("_search_score", 0.0) or 0.0), reverse=True)
+        return cards[: max(1, int(limit))]
+
+    @classmethod
+    def _knowledge_card_search_tokens(cls, keyword: str) -> List[str]:
+        text = re.sub(r"\s+", " ", str(keyword or "").strip().lower())
+        if not text:
+            return []
+
+        candidates: List[str] = []
+        compact = re.sub(r"[\s，,。.!！?？:：;；()（）【】\[\]\"'“”‘’]+", "", text)
+        if 2 <= len(compact) <= 24:
+            candidates.append(compact)
+
+        try:
+            if HAS_JIEBA and jieba is not None:
+                candidates.extend(str(token).strip().lower() for token in jieba.lcut(text))
+        except Exception:
+            pass
+
+        candidates.extend(re.findall(r"[a-z0-9_+\-.]{2,}", text))
+        for span in re.findall(r"[\u4e00-\u9fff]{2,}", text):
+            candidates.append(span)
+            if len(span) > 2:
+                candidates.extend(span[index : index + 2] for index in range(0, len(span) - 1))
+
+        out: List[str] = []
+        seen: set[str] = set()
+        for raw in candidates:
+            token = str(raw or "").strip().lower()
+            token = token.strip(" ：:，,。.!！?？[]【】（）()「」\"'")
+            if len(token) < 2 or token in cls._KNOWLEDGE_CARD_SEARCH_STOP_TERMS or token in seen:
+                continue
+            if re.fullmatch(r"\d+", token):
+                continue
+            seen.add(token)
+            out.append(token)
+            if len(out) >= 12:
+                break
+        return out
+
+    @staticmethod
+    def _knowledge_card_field_values(card: Dict[str, Any], field: str) -> List[str]:
+        value = card.get(field, "")
+        if isinstance(value, list):
+            return [str(item or "").strip().lower() for item in value if str(item or "").strip()]
+        return [str(value or "").strip().lower()] if str(value or "").strip() else []
+
+    @classmethod
+    def _score_knowledge_card_keyword(cls, card: Dict[str, Any], keyword: str, tokens: Sequence[str]) -> float:
+        query = re.sub(r"\s+", "", str(keyword or "").strip().lower())
+        if not query:
+            return 0.0
+
+        token_texts = [
+            str(token or "").strip().lower()
+            for token in tokens
+            if str(token or "").strip()
+        ]
+        unique_tokens = set(token_texts or [query])
+        single_term_query = len(unique_tokens) <= 1
+        low_signal_query = single_term_query and query in cls._LOW_SIGNAL_CARD_QUERY_TERMS
+
+        score = max(0.0, float(card.get("confidence", 0.0) or 0.0))
+        high_signal_match = False
+        for field, weight in cls._KNOWLEDGE_CARD_FIELD_WEIGHTS:
+            field_weight = weight
+            if low_signal_query and field == "answer":
+                field_weight = min(field_weight, 0.8)
+            is_high_signal_field = field in cls._KNOWLEDGE_CARD_HIGH_SIGNAL_FIELDS
+            for value in cls._knowledge_card_field_values(card, field):
+                compact = re.sub(r"\s+", "", value)
+                if not compact:
+                    continue
+                if compact == query:
+                    score += field_weight * 12.0
+                    high_signal_match = high_signal_match or is_high_signal_field
+                elif query in compact or compact in query:
+                    score += field_weight * 5.0
+                    high_signal_match = high_signal_match or is_high_signal_field
+                for token_text in token_texts:
+                    if token_text and token_text in value:
+                        score += field_weight
+                        high_signal_match = high_signal_match or is_high_signal_field
+
+        similarity_text = cls._knowledge_card_similarity_text(card)
+        if similarity_text and not low_signal_query:
+            score += SequenceMatcher(None, query, re.sub(r"\s+", "", similarity_text)).ratio() * 5.0
+        elif similarity_text and high_signal_match:
+            score += SequenceMatcher(None, query, re.sub(r"\s+", "", similarity_text)).ratio() * 2.0
+
+        if single_term_query and not high_signal_match:
+            score *= 0.45
+
+        valid_status = str(card.get("valid_status", "active") or "active").strip().lower()
+        if valid_status == "active":
+            score += 3.0
+        elif valid_status in {"stale", "deprecated"}:
+            score -= 6.0
+        elif valid_status == "conflict":
+            score -= 3.0
+        return score
 
     @staticmethod
     def _knowledge_card_row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:

@@ -767,7 +767,7 @@ class GameKnowledgePlugin(MaiBotPlugin):
             _tool_param("tags", ToolParamType.STRING, "标签，逗号或换行分隔；运行时也兼容数组", False),
             _tool_param("search_terms", ToolParamType.STRING, "检索关键词，逗号或换行分隔", False),
             _tool_param("aliases", ToolParamType.STRING, "别名/俗称，逗号或换行分隔", False),
-            _tool_param("rlcraft_version", ToolParamType.STRING, "RLCraft 版本", False),
+            _tool_param("rlcraft_version", ToolParamType.STRING, "游戏版本", False),
             _tool_param("answer_type", ToolParamType.STRING, "error_fix/config/recommendation/guide/mechanic/location/drop/other", False),
             _tool_param("valid_status", ToolParamType.STRING, "active/stale/deprecated/conflict", False),
             _tool_param("game_id", ToolParamType.STRING, "游戏 ID", False),

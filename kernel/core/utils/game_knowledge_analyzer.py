@@ -183,7 +183,7 @@ class GameKnowledgeAnalyzer:
     - 返回标准化的知识卡片列表
     """
 
-    _GLOBAL_TAGS = {"rlcraft", "rlc", "mc", "minecraft", "我的世界", "游戏", "游戏知识", "game_knowledge", "知识", "问题", "答案"}
+    _GLOBAL_TAGS = {"游戏", "游戏知识", "game_knowledge", "知识", "问题", "答案"}
     _STRUCTURAL_TAGS = {
         "攻略", "机制", "推荐", "配置", "报错", "装备", "版本", "模组", "掉落", "位置", "其他",
         "error_fix", "config", "recommendation", "guide", "mechanic", "location", "drop", "other",
@@ -706,7 +706,7 @@ class GameKnowledgeAnalyzer:
 
     @staticmethod
     def _normalize_aliases(value: Any) -> List[str]:
-        global_aliases = {"rlcraft", "rlc", "mc", "minecraft", "我的世界", "游戏", "手游", "端游"}
+        global_aliases = {"游戏", "手游", "端游"}
         aliases = []
         for item in GameKnowledgeAnalyzer._normalize_list(value):
             token = str(item or "").strip()

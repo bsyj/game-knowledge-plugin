@@ -505,7 +505,7 @@ class ReviewQueueService:
         title = str(card.get("title", "") or "").strip()
         question = str(card.get("question", "") or "").strip()
         answer = str(card.get("answer", "") or "").strip()
-        header_parts = ["RLCraft知识"]
+        header_parts = ["游戏知识"]
         header_map = [
             ("版本", card.get("rlcraft_version") or card.get("version", "")),
             ("类型", card.get("answer_type", "")),

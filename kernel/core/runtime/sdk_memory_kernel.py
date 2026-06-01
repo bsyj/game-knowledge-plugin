@@ -1191,7 +1191,7 @@ class SDKMemoryKernel:
             filtered = self._filter_hits(hits, request.person_id)
             filtered = self._filter_user_visible_hits(filtered)
             filtered = self._filter_query_relevant_hits(query, filtered)
-            filtered = self._merge_preferred_hits(self._anchor_fts_fallback(query, limit), filtered, limit)
+            filtered = self._merge_preferred_hits(self._keyword_fallback_hits(query, limit), filtered, limit)
             return {"summary": self._summary(filtered), "hits": filtered}
 
         query_type = mode
@@ -1227,7 +1227,7 @@ class SDKMemoryKernel:
         filtered = self._filter_hits(hits, request.person_id)
         filtered = self._filter_user_visible_hits(filtered)
         filtered = self._filter_query_relevant_hits(query, filtered)
-        filtered = self._merge_preferred_hits(self._anchor_fts_fallback(query, limit), filtered, limit)
+        filtered = self._merge_preferred_hits(self._keyword_fallback_hits(query, limit), filtered, limit)
         return {"summary": self._summary(filtered), "hits": filtered}
 
     @staticmethod
@@ -5209,7 +5209,19 @@ class SDKMemoryKernel:
                 metadata_text = " ".join(
                     str(value)
                     for key, value in metadata.items()
-                    if key in {"title", "question", "tags", "keywords", "evidence", "category"}
+                    if key
+                    in {
+                        "title",
+                        "question",
+                        "answer",
+                        "tags",
+                        "keywords",
+                        "search_terms",
+                        "aliases",
+                        "evidence",
+                        "category",
+                        "rlcraft_version",
+                    }
                 )
             content = f"{item.get('content', '')} {metadata_text}".lower()
             if not content:
@@ -5285,6 +5297,121 @@ class SDKMemoryKernel:
                 return self._merge_preferred_hits(like_hits, filtered, limit)
         return like_hits
 
+    def _keyword_fallback_hits(self, query: str, limit: int) -> List[Dict[str, Any]]:
+        """Prefer approved card keyword matches, then fall back to paragraph anchors."""
+        card_hits = self._approved_card_keyword_fallback(query, limit)
+        anchor_hits = self._anchor_fts_fallback(query, limit)
+        return self._merge_preferred_hits(card_hits, anchor_hits, limit)
+
+    def _approved_card_keyword_fallback(self, query: str, limit: int) -> List[Dict[str, Any]]:
+        """Search approved card fields directly so exact card metadata is not lost."""
+        if self.metadata_store is None:
+            return []
+        clean_query = str(query or "").strip()
+        if not clean_query:
+            return []
+        search_cards = getattr(self.metadata_store, "search_knowledge_cards", None)
+        if not callable(search_cards):
+            return []
+        try:
+            cards = search_cards(clean_query, limit=max(1, int(limit) * 4))
+        except Exception as exc:
+            logger.warning(f"approved card keyword fallback failed: {exc}")
+            return []
+        if not isinstance(cards, list):
+            return []
+        hits = [
+            self._approved_card_to_search_hit(card, clean_query, index)
+            for index, card in enumerate(cards)
+            if isinstance(card, dict)
+        ]
+        hits.sort(key=lambda item: float(item.get("score", 0.0) or 0.0), reverse=True)
+        return self._filter_query_relevant_hits(clean_query, hits[: max(1, int(limit))])
+
+    @classmethod
+    def _approved_card_to_search_hit(
+        cls,
+        card: Dict[str, Any],
+        query: str,
+        index: int = 0,
+    ) -> Dict[str, Any]:
+        title = str(card.get("title", "") or "").strip()
+        question = str(card.get("question", "") or "").strip()
+        answer = str(card.get("answer", "") or "").strip()
+        tags = card.get("tags", [])
+        search_terms = card.get("search_terms", [])
+        aliases = card.get("aliases", [])
+        steps = card.get("steps", [])
+
+        text_parts: List[str] = []
+        if isinstance(aliases, list) and aliases:
+            text_parts.append("别名: " + " ".join(str(item).strip() for item in aliases if str(item).strip()))
+        if isinstance(search_terms, list) and search_terms:
+            text_parts.append("关键词: " + " ".join(str(item).strip() for item in search_terms if str(item).strip()))
+        if title:
+            text_parts.append(title)
+        if question:
+            text_parts.append(f"Q: {question}")
+        if answer:
+            text_parts.append(f"A: {answer}")
+        if isinstance(steps, list) and steps:
+            text_parts.append("\n步骤:\n" + "\n".join(f"{i + 1}. {step}" for i, step in enumerate(steps)))
+        if isinstance(tags, list) and tags:
+            text_parts.append("标签: " + " ".join(str(tag).strip() for tag in tags if str(tag).strip()))
+        evidence = str(card.get("evidence", "") or "").strip()
+        if evidence:
+            text_parts.append(f"证据: {evidence}")
+
+        try:
+            search_score = float(card.get("_search_score"))
+        except (TypeError, ValueError):
+            search_score = cls._approved_card_keyword_score(card, query)
+
+        paragraph_hash = str(card.get("paragraph_hash", "") or "").strip()
+        card_hash = str(card.get("card_hash", "") or "").strip()
+        hit_hash = paragraph_hash or card_hash or str(card.get("id", "") or "")
+        metadata = {
+            "card_id": card.get("id"),
+            "card_hash": card_hash,
+            "paragraph_hash": paragraph_hash,
+            "title": title,
+            "question": question,
+            "answer": answer,
+            "category": card.get("category", ""),
+            "review_status": card.get("review_status", "approved"),
+            "valid_status": card.get("valid_status", "active"),
+            "source_platform": card.get("source_platform", "") or card.get("platform", ""),
+            "rlcraft_version": card.get("rlcraft_version", ""),
+            "answer_type": card.get("answer_type", "other"),
+            "search_terms": search_terms if isinstance(search_terms, list) else [],
+            "aliases": aliases if isinstance(aliases, list) else [],
+            "tags": tags if isinstance(tags, list) else [],
+            "evidence": evidence,
+            "source_group_id": card.get("source_group_id", ""),
+            "source_group_name": card.get("source_group_name", ""),
+            "source_stream_id": card.get("source_stream_id", ""),
+            "created_at": card.get("created_at"),
+            "updated_at": card.get("updated_at"),
+        }
+        return {
+            "hash": hit_hash,
+            "id": hit_hash,
+            "content": "\n".join(text_parts).strip(),
+            "score": search_score - (index * 0.000001),
+            "type": "paragraph",
+            "source": "approved_card_keyword",
+            "title": title,
+            "metadata": metadata,
+        }
+
+    @staticmethod
+    def _approved_card_keyword_score(card: Dict[str, Any], query: str) -> float:
+        try:
+            tokens = MetadataStore._knowledge_card_search_tokens(query)
+            return MetadataStore._score_knowledge_card_keyword(card, query, tokens)
+        except Exception:
+            return max(0.0, float(card.get("confidence", 0.0) or 0.0))
+
     @staticmethod
     def _decode_row_metadata(raw: Any) -> Dict[str, Any]:
         if not raw:
@@ -5342,7 +5469,19 @@ class SDKMemoryKernel:
             metadata_text = " ".join(
                 str(value)
                 for key, value in metadata.items()
-                if key in {"title", "question", "tags", "keywords", "evidence", "category"}
+                if key
+                in {
+                    "title",
+                    "question",
+                    "answer",
+                    "tags",
+                    "keywords",
+                    "search_terms",
+                    "aliases",
+                    "evidence",
+                    "category",
+                    "rlcraft_version",
+                }
             )
             haystack = f"{content} {metadata_text}".lower()
             matched = [term for term in like_terms if str(term).lower() in haystack]

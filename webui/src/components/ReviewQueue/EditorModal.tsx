@@ -63,7 +63,7 @@ export default function EditorModal({ card, form, busy, onChange, onClose, onSav
                 </select>
               </label>
               <label className="grid gap-1 text-xs text-default-500">
-                RLCraft 版本
+                游戏版本
                 <input className={EDIT_INPUT_CLASS} value={form.rlcraft_version} onChange={(event) => onChange("rlcraft_version", event.target.value)} placeholder="例如 2.9 / 3.3 / 当前服版本" />
               </label>
             </div>
@@ -95,7 +95,7 @@ export default function EditorModal({ card, form, busy, onChange, onClose, onSav
             </label>
             <label className="grid gap-1 text-xs text-default-500">
               别名
-              <input className={EDIT_INPUT_CLASS} value={form.aliases} onChange={(event) => onChange("aliases", event.target.value)} placeholder="RLCraft, RLC, 中文简称等" />
+              <input className={EDIT_INPUT_CLASS} value={form.aliases} onChange={(event) => onChange("aliases", event.target.value)} placeholder="游戏名、简称、俗称等" />
             </label>
             <label className="grid gap-1 text-xs text-default-500">
               证据/来源说明

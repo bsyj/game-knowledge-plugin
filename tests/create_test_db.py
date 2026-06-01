@@ -38,7 +38,7 @@ from announcement_store import AnnouncementStore
 # ═══════════════════════════════════════════════════════════════════════════
 
 GAME_NICKNAMES = [
-    "史蒂夫", "Alex", "Herobrine", "末影龙克星", "RLCraft大师",
+    "史蒂夫", "Alex", "Herobrine", "末影龙克星", "游戏大师",
     "附魔师老王", "红石专家小张", "建筑狂魔", "PVP战神",
     "挖矿小能手", "药水商人", "指令方块侠", "跑酷达人",
     "生存专家", "创造建筑师", "凋零杀手", "远古守卫",
@@ -49,7 +49,7 @@ GAME_QUESTIONS = [
     ("如何制作龙之吐息？", "使用玻璃瓶右键末影龙的吐息粒子来收集龙之吐息。"),
     ("龙眼装备的合成配方是什么？", "龙眼需要发光宝石、龙的头骨和钻石块在工作台合成。"),
     ("如何找到末地传送门？", "使用末影之眼投掷，跟随其飞行方向即可找到要塞中的末地传送门。"),
-    ("RLCraft中如何获得灵魂绑定附魔？", "通过与图书管理员村民交易或在地牢宝箱中找到灵魂绑定附魔书。"),
+    ("游戏中如何获得灵魂绑定附魔？", "通过与图书管理员村民交易或在地牢宝箱中找到灵魂绑定附魔书。"),
     ("如何驯服冰与火之歌中的龙？", "需要找到龙蛋并孵化，用龙食喂养幼龙直到成年。"),
     ("下界合金装备怎么升级？", "使用下界合金锭在锻造台将钻石装备升级为下界合金装备。"),
     ("如何制作抗火药水？", "使用地狱疣+岩浆膏在酿造台中制作，或击杀岩浆怪获取。"),
@@ -64,7 +64,7 @@ GAME_QUESTIONS = [
 ]
 
 BOARD_TITLES = [
-    "RLCraft 2.9.3 龙之吐息获取方法",
+    "示例游戏 2.9.3 龙之吐息获取方法",
     "求问：冰与火之歌龙怎么驯服？",
     "下界合金装备升级细节问题",
     "末地传送门找不到怎么办",
@@ -263,12 +263,12 @@ def generate_knowledge_cards(conn: sqlite3.Connection, count: int) -> None:
             """,
             (
                 qa[0], cat, qa[0], qa[1],
-                json.dumps(["game_knowledge", "rlcraft", cat], ensure_ascii=False),
-                json.dumps(["龙", "配方", "合成", "RLCraft"], ensure_ascii=False),
+                json.dumps(["game_knowledge", "game", cat], ensure_ascii=False),
+                json.dumps(["龙", "配方", "合成", "SampleGame"], ensure_ascii=False),
                 "2.9.3", atype, "active", status,
                 "auto_approved" if status == "approved" else ("ai_rejected" if status == "rejected" else "pending"),
                 0.9 if status == "approved" else (0.3 if status == "rejected" else 0.5),
-                "100000001", "RLCraft交流群",
+                "100000001", "游戏交流群",
                 f"card_hash_{i:04d}", "test_user_000", "test_user_000", "测试脚本",
                 f"由群聊消息自动提取 #{i}", time.time() - (count - i) * 3600, time.time() - (count - i) * 1800,
             ),

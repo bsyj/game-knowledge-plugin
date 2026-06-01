@@ -117,7 +117,7 @@ class TestBoardFullFlow:
         # 1. User creates a question thread
         thread = board_store.create_thread(
             title="Dragon Eye Recipe?",
-            content="I need the crafting recipe for Dragon's Eye in RLCraft.",
+            content="I need the crafting recipe for Dragon's Eye in the game.",
             author_id="user_001",
             author_nickname="Player1",
         )
