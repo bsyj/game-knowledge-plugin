@@ -3,7 +3,7 @@
   "id": "bsyj.game-knowledge-plugin",
   "version": "1.0.5",
   "name": "GameKnowledge",
-  "description": "Industrial-grade game knowledge analysis, storage, graph, and retrieval plugin for MaiBot.",
+  "description": "面向游戏社群的知识库插件，支持群聊知识自动提取、AI 预审核、图谱存储、检索问答与 WebUI 管理。",
   "author": {
     "name": "bsyj",
     "url": "https://github.com/bsyj/game-knowledge-plugin"
@@ -63,5 +63,13 @@
   ],
   "i18n": {
     "default_locale": "zh-CN"
+  },
+  "display": {
+    "icon": {
+      "type": "local",
+      "value": "assets/icon.png",
+      "fallback": "database",
+      "background": "#0f172a"
+    }
   }
 }
