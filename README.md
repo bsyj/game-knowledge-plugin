@@ -131,53 +131,112 @@ host = "0.0.0.0"
 
 ### 自定义知识提取提示词
 
-如果你的群聊主题、服务器规则、整合包版本或群内黑话和默认配置不同，可以按自己的群修改插件目录下的提示词文件：
+如果你的群聊主题、服务器规则、整合包版本、黑话或审核标准和默认配置不同，可以直接改插件里的知识提取提示词。
 
-`kernel/core/utils/game_knowledge_analyzer.py`
+**最常改的文件：**
 
-#### 建议优先自定义的地方
+```text
+kernel/core/utils/game_knowledge_analyzer.py
+```
 
-第一次部署时，建议按下面顺序改，先跑起来，再逐步精修：
+> [!TIP]
+> **先改这 4 件事：** 识别什么、拒绝什么、怎么写字段、保留哪些群内词。不要一上来改字段名。
 
-| 目标 | 修改位置 | 建议怎么改 |
+#### 最短修改路径
+
+第一次部署时按这个顺序改，通常就能让自动入库质量明显提升：
+
+| 顺序 | 你要解决的问题 | 修改位置 | 改法要点 |
+| --- | --- | --- | --- |
+| 1 | 只采集目标群 | `config.toml` 的 `collector.allowed_source_group_ids` | 填目标群 ID，避免 Bot 能看到的所有群都被采集 |
+| 2 | 用对模型任务 | `collector.llm_task_name` / `collector.ai_review_task_name` | 改成 MaiBot 中实际可用、适合长文本分析的任务名 |
+| 3 | 让 AI 懂你的群 | `_LLM_SYSTEM_PROMPT` 开头的角色背景 | 写清游戏名、服务器、版本、玩法阶段、活动/赛季、群内黑话 |
+| 4 | 控制入库质量 | `_LLM_SYSTEM_PROMPT` 的“提取策略 / 质量门槛” | 写清哪些内容值得入库，哪些闲聊、广告、交易、猜测要丢弃 |
+| 5 | 控制审核松紧 | `_AI_REVIEW_PROMPT` | 想减少垃圾卡就收紧通过标准；想让人工多兜底就放宽拒绝标准 |
+| 6 | 提高搜索命中 | `_LLM_SYSTEM_PROMPT` 和 `_polish_search_terms_with_llm()` 的 `prompt` | 强调保留本群简称、别名、报错原文、装备/地图/任务/配置项 |
+| 7 | 调整标签体系 | `_TAG_REWRITE` / `_ALLOWED_THEME_TAGS` 和 `MetadataStore._CARD_TAG_REWRITE` / `_ALLOWED_CARD_THEME_TAGS` | 只有需要新增稳定标签时才改；两处要同步，否则标签可能被过滤 |
+
+#### 提示词地图
+
+`game_knowledge_analyzer.py` 里最关键的是这 3 处：
+
+| 提示词 | 作用 | 什么时候改 |
 | --- | --- | --- |
-| 限定采集范围 | `config.toml` 的 `collector.allowed_source_group_ids` | 填自己的目标群 ID，避免 Bot 能看到的所有群都被采集 |
-| 匹配模型任务 | `config.toml` 的 `collector.llm_task_name` 和 `collector.ai_review_task_name` | 改成 MaiBot 里实际可用、适合长文本分析的模型任务名 |
-| 改成自己的游戏 | `game_knowledge_analyzer.py` 的 `_LLM_SYSTEM_PROMPT` | 把角色背景、游戏名、服务器/区服、玩法阶段、活动/赛季、群内黑话写进去 |
-| 调整入库标准 | `_LLM_SYSTEM_PROMPT` 的“提取策略 / 质量门槛” | 写清哪些内容应该入库，哪些闲聊、吐槽、交易、广告、低置信猜测要丢弃 |
-| 调整 AI 审核严格度 | `_AI_REVIEW_PROMPT` | 想减少垃圾卡就收紧通过标准；想让人工多兜底就放宽拒绝标准 |
-| 优化搜索命中 | `_LLM_SYSTEM_PROMPT` 和 `_polish_search_terms_with_llm()` 里的 `prompt` | 强调要保留本群常用简称、别名、报错原文、角色/装备/地图/任务名 |
-| 修改标签体系 | `GameKnowledgeAnalyzer._TAG_REWRITE` / `_ALLOWED_THEME_TAGS`，以及 `MetadataStore._CARD_TAG_REWRITE` / `_ALLOWED_CARD_THEME_TAGS` | 只有你需要新增稳定标签时才改；两处要同步，否则标签可能在入库时被过滤 |
+| `_LLM_SYSTEM_PROMPT` | 决定从群聊里提取哪些知识卡片，以及 `title`、`question`、`answer`、`category`、`search_terms` 等字段怎么写 | 必改。想适配自己的游戏、服务器或群黑话，先改这里 |
+| `_AI_REVIEW_PROMPT` | 决定卡片进入待审核、待补答，还是被 AI 预拒绝 | 建议改。垃圾卡多就收紧；有价值问题被误拒就放宽 |
+| `_polish_search_terms_with_llm()` 里的 `prompt` | 精修 `search_terms`，影响检索命中和召回 | 搜不到群内简称、别名、报错原文时改这里 |
 
-一般不建议新用户改字段名。`rlcraft_version` 是历史兼容字段，虽然名字保留，但现在可当作“游戏版本 / 服务器版本 / 区服 / 平台 / 赛季 / 活动版本”使用。直接改字段名会牵涉数据库、审核队列、WebUI 和测试。
+其他较少需要改动的 LLM 提示词：
 
-这个文件里主要有 3 处和自动分析入库相关的 LLM 提示词：
+| 文件 | 用途 |
+| --- | --- |
+| `plugin.py` 的 `_llm_polish_board_question()` | 留言板问题转发到 QQ 群前的口语化改写 |
+| `kernel/core/utils/summary_importer.py` 的 `SUMMARY_PROMPT_TEMPLATE` | 从历史聊天记录批量导入知识 |
+| `kernel/core/utils/episode_segmentation_service.py` | Episode 情景摘要切分 |
+| `kernel/core/strategies/factual.py` | 实体和三元组抽取 |
 
-- `_LLM_SYSTEM_PROMPT`：群聊知识提取提示词，决定从聊天记录里提取哪些知识卡片，以及 `title`、`question`、`answer`、`category` 等字段怎么写。
-- `_AI_REVIEW_PROMPT`：AI 预审核提示词，决定卡片是否适合进入人工审核队列，或是否标记为待补答、拒绝。想收紧或放宽审核标准，优先改这里。
-- `_polish_search_terms_with_llm()` 里的 `prompt`：检索关键词精修提示词，影响 `search_terms` 的生成质量。
+#### 写提示词时的检查清单
 
-如果你只想快速适配自己的群，最少改 `_LLM_SYSTEM_PROMPT` 里的 5 件事：
+让提示词更稳定，建议每次都补齐下面几块：
 
-- 角色背景：说明要提取的游戏、服务器、平台、玩法阶段和群聊语境。
-- 入库标准：明确哪些攻略、机制、配置、报错、掉落、位置、装备/角色/阵容推荐值得入库。
-- 拒绝标准：明确哪些闲聊、广告、隐私、交易、低质量猜测、无结论争论要拒绝。
-- 字段说明：按你的群补充 `category`、`answer_type`、`valid_status`、`rlcraft_version` 等字段含义。
-- 示例内容：加入少量脱敏后的本群问答样例，让 AI 更稳定地理解群内说法。
+- **领域背景**：游戏名、服务器名、整合包/版本、区服、赛季、玩法阶段。
+- **高价值内容**：攻略、机制、配置、报错、掉落、位置、装备/角色/阵容推荐、版本差异。
+- **拒绝内容**：闲聊、表情、吵架、广告、交易、隐私、无结论争论、低置信猜测。
+- **群内词表**：简称、别名、黑话、配置项、指令、报错原文、地图/任务/Boss/装备名。
+- **字段约束**：明确 `question` 必须是完整问题，`answer` 必须自包含，`search_terms` 必须是短关键词。
+- **脱敏样例**：放 3 到 6 条真实群聊风格的问答样例，比抽象规则更能稳住输出。
 
-建议优先复用现有字段：`title`、`question`、`answer`、`steps`、`tags`、`search_terms`、`aliases`、`category`、`answer_type`、`valid_status`、`rlcraft_version`、`evidence`。如果要新增持久化字段，不只要修改提示词，还需要同步修改数据库存储、审核队列、WebUI 展示和测试，否则字段可能在入库或展示时丢失。
+建议优先复用现有字段：`title`、`question`、`answer`、`steps`、`tags`、`search_terms`、`aliases`、`category`、`answer_type`、`valid_status`、`rlcraft_version`、`evidence`。
 
-修改提示词后建议先运行一次冒烟测试：
+`rlcraft_version` 是历史兼容字段，虽然名字保留，但现在可当作“游戏版本 / 服务器版本 / 区服 / 平台 / 赛季 / 活动版本”使用。不要轻易改字段名；新增持久化字段需要同步修改数据库存储、审核队列、WebUI 展示和测试，否则字段可能在入库或展示时丢失。
+
+#### 推荐改写骨架
+
+可以把 `_LLM_SYSTEM_PROMPT` 的开头改成这种结构，再按你的群替换占位内容：
+
+```text
+你是【游戏名/服务器名】玩家社群知识提取专家。你的任务是把 QQ 群聊内容整理成结构化问答卡片，供 replyer AI 回答玩家问题。
+
+群聊背景：
+- 游戏/服务器：【写清游戏、服务器、区服、整合包、版本】
+- 高频主题：【写 8 到 15 个最常见主题，例如装备、附魔、配置、报错、地图、掉落、活动、版本差异】
+- 群内黑话：【写简称、别名、模组名、指令、配置键、Boss 名、地图名】
+
+优先提取：
+1. 玩家明确提问且有人回答的 Q&A。
+2. 玩家描述问题，后续有人给出解决方案的隐含问答。
+3. 多人讨论后形成共识的机制、配置、版本差异。
+4. 有价值但暂时没有答案的问题，只在 question 足够明确时标记 needs_answer=true。
+
+必须拒绝：
+- 闲聊、玩笑、情绪、吵架、广告、交易、隐私、群管理通知。
+- 没有结论的争论、低置信猜测、缺上下文的“这个怎么弄”。
+
+输出要求：
+- question 必须是完整、可搜索、玩家会自然提问的问题。
+- answer 必须自包含，replyer AI 拿着就能直接回答玩家。
+- search_terms 只放短关键词、别名、报错原文、配置项和核心名词。
+- 输出只能是 JSON，不要 markdown 或解释文字。
+```
+
+#### 修改后怎么验证
+
+改完提示词后建议先跑一次冒烟测试：
 
 ```bash
 uv run --project ../.. python -m pytest tests/test_production_smoke.py -v
 ```
 
-再用少量脱敏聊天记录观察审核队列输出，确认字段、分类和检索词符合你的群聊习惯。
+然后用少量脱敏聊天记录触发一次分析，重点看审核队列里的 4 件事：
+
+- `question` 是否完整，不依赖上下文。
+- `answer` 是否能直接回答玩家。
+- `category` / `answer_type` 是否符合你的分类习惯。
+- `search_terms` 是否保留了群内简称、别名、报错原文和关键物品名。
 
 #### 可复制提示词参考
 
-默认提示词已经泛化为通用游戏社群版本，适合大多数游戏群直接使用。字段名里的 `rlcraft_version` 是历史兼容字段，实际可填写游戏版本、服务器版本、区服、平台、赛季或活动版本。
+默认提示词已经泛化为通用游戏社群版本，适合大多数游戏群直接使用。你也可以只复制其中的结构，再把例子换成自己的群聊样例。
 
 <details>
 <summary>默认知识提取提示词</summary>
@@ -294,11 +353,6 @@ FPS / PVP / 竞技游戏模板
 ```
 
 </details>
-
-其他较少需要改动的 LLM 提示词位置：
-
-- `plugin.py` 的 `_llm_polish_board_question()`：留言板问题转发到 QQ 群前的口语化改写提示词。
-- `kernel/core/utils/summary_importer.py` 的 `SUMMARY_PROMPT_TEMPLATE`：从历史聊天记录批量导入知识时使用的提取提示词。
 
 ## 完整配置说明
 
